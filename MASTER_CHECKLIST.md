@@ -101,7 +101,7 @@ Use these keywords to navigate to relevant `.md` files:
 
 | # | Feature | Status | File(s) | Tests | Notes |
 |---|---------|--------|---------|-------|-------|
-| 1.3.1 | Symbol library browser | 📋 | - | - | Search, filter, preview |
+| 1.3.1 | Symbol library browser | ✅ | `library.rs` | 7 | Tree view, filter, preview |
 | 1.3.2 | Symbol placement (click) | 📋 | - | - | Place from library |
 | 1.3.3 | Symbol placement (quick-add) | 📋 | - | - | Keyboard shortcuts R, C, L |
 | 1.3.4 | Wire drawing (click-click) | 📋 | - | - | Orthogonal segments |
@@ -871,13 +871,13 @@ Use these keywords to navigate to relevant `.md` files:
 
 | Phase | Total Items | Complete | In Progress | Planned |
 |-------|-------------|----------|-------------|---------|
-| Phase 1: Foundation | 234 | 98 | 4 | 132 |
+| Phase 1: Foundation | 234 | 99 | 4 | 131 |
 | Phase 2: Professional | 72 | 10 | 0 | 62 |
 | Phase 3: Innovation | 56 | 12 | 0 | 44 |
 | Phase 4: AI Integration | 22 | 0 | 0 | 22 |
 | Phase 5: Ecosystem | 25 | 0 | 0 | 25 |
 | UI Framework | 54 | 0 | 1 | 53 |
-| **Total** | **463** | **120** | **5** | **338** |
+| **Total** | **463** | **121** | **5** | **337** |
 
 **Overall Progress:** ~25% complete (Phase 1: ~39%)
 
@@ -886,7 +886,7 @@ Use these keywords to navigate to relevant `.md` files:
 ## Test Summary
 
 ```
-Total Tests: 132 passing
+Total Tests: 139 passing
 
 hwt-core:
   - bom: 8
