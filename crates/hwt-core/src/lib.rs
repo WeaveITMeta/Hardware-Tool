@@ -14,6 +14,7 @@ pub mod constraint;
 pub mod domain;
 pub mod drc;
 pub mod erc;
+pub mod pcb_drc;
 pub mod geometry;
 pub mod gerber;
 pub mod io;

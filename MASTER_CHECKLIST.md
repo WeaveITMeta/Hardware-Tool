@@ -341,14 +341,14 @@ Use these keywords to navigate to relevant `.md` files:
 | 1.11.7 | ERC unconnected pins | ✅ | `erc.rs` | - | Missing connections |
 | 1.11.8 | ERC power issues | 📋 | - | - | Missing power |
 | 1.11.9 | ERC label errors | 📋 | - | - | Orphaned labels |
-| 1.11.10 | PCB DRC: trace clearance | 📋 | - | - | Copper spacing |
-| 1.11.11 | PCB DRC: trace width | 📋 | - | - | Minimum width |
-| 1.11.12 | PCB DRC: via clearance | 📋 | - | - | Via spacing |
-| 1.11.13 | PCB DRC: via drill | 📋 | - | - | Minimum drill |
-| 1.11.14 | PCB DRC: annular ring | 📋 | - | - | Copper around holes |
+| 1.11.10 | PCB DRC: trace clearance | ✅ | `pcb_drc.rs` | 6 | Copper spacing |
+| 1.11.11 | PCB DRC: trace width | ✅ | `pcb_drc.rs` | - | Minimum width |
+| 1.11.12 | PCB DRC: via clearance | ✅ | `pcb_drc.rs` | - | Via spacing |
+| 1.11.13 | PCB DRC: via drill | ✅ | `pcb_drc.rs` | - | Minimum drill |
+| 1.11.14 | PCB DRC: annular ring | ✅ | `pcb_drc.rs` | - | Copper around holes |
 | 1.11.15 | PCB DRC: silkscreen on pads | 📋 | - | - | Avoid silk on copper |
-| 1.11.16 | PCB DRC: courtyard overlap | 📋 | - | - | Component spacing |
-| 1.11.17 | PCB DRC: edge clearance | 📋 | - | - | Board edge spacing |
+| 1.11.16 | PCB DRC: courtyard overlap | ✅ | `pcb_drc.rs` | - | Component spacing |
+| 1.11.17 | PCB DRC: edge clearance | ✅ | `pcb_drc.rs` | - | Board edge spacing |
 | 1.11.18 | Real-time DRC | 📋 | - | - | Check during edit |
 | 1.11.19 | DRC marker display | 📋 | - | - | Visual indicators |
 | 1.11.20 | DRC navigator | 📋 | - | - | Jump to violations |
@@ -871,26 +871,27 @@ Use these keywords to navigate to relevant `.md` files:
 
 | Phase | Total Items | Complete | In Progress | Planned |
 |-------|-------------|----------|-------------|---------|
-| Phase 1: Foundation | 234 | 74 | 4 | 156 |
+| Phase 1: Foundation | 234 | 81 | 4 | 149 |
 | Phase 2: Professional | 72 | 10 | 0 | 62 |
 | Phase 3: Innovation | 56 | 12 | 0 | 44 |
 | Phase 4: AI Integration | 22 | 0 | 0 | 22 |
 | Phase 5: Ecosystem | 25 | 0 | 0 | 25 |
 | UI Framework | 54 | 0 | 1 | 53 |
-| **Total** | **463** | **96** | **5** | **362** |
+| **Total** | **463** | **103** | **5** | **355** |
 
-**Overall Progress:** ~22% complete (Phase 1: ~33%)
+**Overall Progress:** ~23% complete (Phase 1: ~36%)
 
 ---
 
 ## Test Summary
 
 ```
-Total Tests: 78 passing
+Total Tests: 84 passing
 
 hwt-core:
   - bom: 8
   - circuit: 1
+  - pcb_drc: 6
   - command: 3
   - component: 1
   - constraint: 1
