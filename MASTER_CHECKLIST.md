@@ -406,7 +406,7 @@ Use these keywords to navigate to relevant `.md` files:
 | 1.14.5 | KiCAD project import | ✅ | `kicad.rs` | 2 | .kicad_pro |
 | 1.14.6 | Altium schematic import | ✅ | `altium.rs` | 8 | .SchDoc |
 | 1.14.7 | Altium PCB import | 📋 | - | - | .PcbDoc |
-| 1.14.8 | Eagle schematic import | 📋 | - | - | .sch |
+| 1.14.8 | Eagle schematic import | ✅ | `eagle.rs` | 8 | .sch |
 | 1.14.9 | Eagle PCB import | 📋 | - | - | .brd |
 | 1.14.10 | OrCAD import | 📋 | - | - | .dsn |
 | 1.14.11 | SPICE netlist export | ✅ | `spice.rs` | 6 | For simulation |
@@ -871,13 +871,13 @@ Use these keywords to navigate to relevant `.md` files:
 
 | Phase | Total Items | Complete | In Progress | Planned |
 |-------|-------------|----------|-------------|---------|
-| Phase 1: Foundation | 234 | 100 | 4 | 130 |
+| Phase 1: Foundation | 234 | 101 | 4 | 129 |
 | Phase 2: Professional | 72 | 10 | 0 | 62 |
 | Phase 3: Innovation | 56 | 12 | 0 | 44 |
 | Phase 4: AI Integration | 22 | 0 | 0 | 22 |
 | Phase 5: Ecosystem | 25 | 0 | 0 | 25 |
 | UI Framework | 54 | 0 | 1 | 53 |
-| **Total** | **463** | **122** | **5** | **336** |
+| **Total** | **463** | **123** | **5** | **335** |
 
 **Overall Progress:** ~25% complete (Phase 1: ~39%)
 
@@ -886,7 +886,7 @@ Use these keywords to navigate to relevant `.md` files:
 ## Test Summary
 
 ```
-Total Tests: 147 passing
+Total Tests: 155 passing
 
 hwt-core:
   - bom: 8
