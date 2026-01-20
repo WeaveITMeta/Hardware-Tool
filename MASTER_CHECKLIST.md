@@ -385,12 +385,12 @@ Use these keywords to navigate to relevant `.md` files:
 | 1.13.8 | Excellon drill map | 📋 | - | - | Visual drill map |
 | 1.13.9 | IPC-2581 export | 📋 | - | - | Modern format |
 | 1.13.10 | ODB++ export | 📋 | - | - | Alternative format |
-| 1.13.11 | BOM generation (CSV) | 📋 | - | - | Component list |
-| 1.13.12 | BOM generation (HTML) | 📋 | - | - | Interactive BOM |
-| 1.13.13 | BOM grouping | 📋 | - | - | By value, footprint |
-| 1.13.14 | BOM custom fields | 📋 | - | - | Manufacturer, MPN |
-| 1.13.15 | Pick-and-place (CSV) | 📋 | - | - | Component positions |
-| 1.13.16 | Pick-and-place (top/bottom) | 📋 | - | - | Separate files |
+| 1.13.11 | BOM generation (CSV) | ✅ | `bom.rs` | 8 | Component list |
+| 1.13.12 | BOM generation (HTML) | ✅ | `bom.rs` | - | Interactive BOM |
+| 1.13.13 | BOM grouping | ✅ | `bom.rs` | - | By value, footprint |
+| 1.13.14 | BOM custom fields | ✅ | `bom.rs` | - | Manufacturer, MPN |
+| 1.13.15 | Pick-and-place (CSV) | ✅ | `pnp.rs` | 8 | Component positions |
+| 1.13.16 | Pick-and-place (top/bottom) | ✅ | `pnp.rs` | - | Separate files |
 | 1.13.17 | Fabrication drawing (PDF) | 📋 | - | - | Layer stackup, notes |
 | 1.13.18 | Assembly drawing (PDF) | 📋 | - | - | Component placement |
 | 1.13.19 | 3D STEP export | 📋 | - | - | Full board model |
@@ -871,24 +871,25 @@ Use these keywords to navigate to relevant `.md` files:
 
 | Phase | Total Items | Complete | In Progress | Planned |
 |-------|-------------|----------|-------------|---------|
-| Phase 1: Foundation | 234 | 68 | 4 | 162 |
+| Phase 1: Foundation | 234 | 74 | 4 | 156 |
 | Phase 2: Professional | 72 | 10 | 0 | 62 |
 | Phase 3: Innovation | 56 | 12 | 0 | 44 |
 | Phase 4: AI Integration | 22 | 0 | 0 | 22 |
 | Phase 5: Ecosystem | 25 | 0 | 0 | 25 |
 | UI Framework | 54 | 0 | 1 | 53 |
-| **Total** | **463** | **90** | **5** | **368** |
+| **Total** | **463** | **96** | **5** | **362** |
 
-**Overall Progress:** ~20% complete (Phase 1: ~31%)
+**Overall Progress:** ~22% complete (Phase 1: ~33%)
 
 ---
 
 ## Test Summary
 
 ```
-Total Tests: 62 passing
+Total Tests: 78 passing
 
 hwt-core:
+  - bom: 8
   - circuit: 1
   - command: 3
   - component: 1
@@ -904,6 +905,7 @@ hwt-core:
   - library: 3
   - net: 1
   - netclass: 3
+  - pnp: 8
   - programmatic: 6
   - project: 1
   - schematic: 4
@@ -927,9 +929,10 @@ hwt-core:
 
 1. [ ] Point-to-point routing (1.8.1-1.8.8)
 2. [ ] Symbol library browser UI (1.3.1)
-3. [ ] BOM generation CSV (1.13.11)
-4. [ ] PCB DRC rules (1.11.10-1.11.17)
-5. [ ] KiCAD PCB import (1.14.3)
+3. [x] ~~BOM generation CSV (1.13.11)~~ ✅
+4. [x] ~~Pick-and-place export (1.13.15-1.13.16)~~ ✅
+5. [ ] PCB DRC rules (1.11.10-1.11.17)
+6. [ ] KiCAD PCB import (1.14.3)
 
 ### Medium-term (Next Quarter)
 
