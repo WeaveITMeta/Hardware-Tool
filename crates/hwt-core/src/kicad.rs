@@ -1196,6 +1196,319 @@ impl Footprint {
     }
 }
 
+/// A KiCAD project with all associated files.
+#[derive(Debug, Clone)]
+pub struct KicadProject {
+    /// Project name
+    pub name: String,
+    /// Project directory path
+    pub path: String,
+    /// Schematic sheets
+    pub schematics: Vec<SchematicSheet>,
+    /// PCB layout (if present)
+    pub layout: Option<Layout>,
+    /// Project settings
+    pub settings: KicadProjectSettings,
+}
+
+/// KiCAD project settings from .kicad_pro file.
+#[derive(Debug, Clone, Default)]
+pub struct KicadProjectSettings {
+    /// Text variables
+    pub text_vars: std::collections::HashMap<String, String>,
+    /// Net classes
+    pub net_classes: Vec<NetClassSettings>,
+    /// Board design rules
+    pub design_rules: Option<DesignRuleSettings>,
+}
+
+/// Net class settings.
+#[derive(Debug, Clone)]
+pub struct NetClassSettings {
+    /// Net class name
+    pub name: String,
+    /// Track width (mm)
+    pub track_width: f64,
+    /// Via diameter (mm)
+    pub via_diameter: f64,
+    /// Via drill (mm)
+    pub via_drill: f64,
+    /// Clearance (mm)
+    pub clearance: f64,
+}
+
+/// Design rule settings.
+#[derive(Debug, Clone, Default)]
+pub struct DesignRuleSettings {
+    /// Minimum track width (mm)
+    pub min_track_width: Option<f64>,
+    /// Minimum via diameter (mm)
+    pub min_via_diameter: Option<f64>,
+    /// Minimum via drill (mm)
+    pub min_via_drill: Option<f64>,
+    /// Minimum clearance (mm)
+    pub min_clearance: Option<f64>,
+}
+
+impl KicadProject {
+    /// Create a new empty project.
+    pub fn new(name: impl Into<String>, path: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            path: path.into(),
+            schematics: Vec::new(),
+            layout: None,
+            settings: KicadProjectSettings::default(),
+        }
+    }
+}
+
+/// KiCAD project importer (.kicad_pro files).
+pub struct KicadProjectImporter;
+
+impl KicadProjectImporter {
+    /// Import a KiCAD project from a .kicad_pro file.
+    pub fn import<P: AsRef<Path>>(path: P) -> KicadResult<KicadProject> {
+        let path = path.as_ref();
+        let content = fs::read_to_string(path).map_err(|e| KicadError {
+            message: format!("Failed to read project file: {}", e),
+            line: None,
+        })?;
+
+        let project_dir = path.parent().ok_or_else(|| KicadError {
+            message: "Invalid project path".to_string(),
+            line: None,
+        })?;
+
+        let project_name = path.file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("Unknown")
+            .to_string();
+
+        let mut project = KicadProject::new(&project_name, project_dir.to_string_lossy());
+
+        // Parse project settings from JSON
+        Self::parse_project_settings(&content, &mut project)?;
+
+        // Look for schematic files
+        let sch_path = project_dir.join(format!("{}.kicad_sch", project_name));
+        if sch_path.exists() {
+            if let Ok(schematic) = KicadSchematicImporter::import(&sch_path) {
+                project.schematics.push(schematic);
+            }
+        }
+
+        // Look for PCB file
+        let pcb_path = project_dir.join(format!("{}.kicad_pcb", project_name));
+        if pcb_path.exists() {
+            if let Ok(layout) = KicadPcbImporter::import(&pcb_path) {
+                project.layout = Some(layout);
+            }
+        }
+
+        Ok(project)
+    }
+
+    /// Import from string content (project settings only).
+    pub fn import_from_string(content: &str, name: &str) -> KicadResult<KicadProject> {
+        let mut project = KicadProject::new(name, "");
+        Self::parse_project_settings(content, &mut project)?;
+        Ok(project)
+    }
+
+    /// Parse project settings from JSON content.
+    fn parse_project_settings(content: &str, project: &mut KicadProject) -> KicadResult<()> {
+        // KiCAD 6+ uses JSON format for .kicad_pro files
+        // We'll do basic parsing without a full JSON library
+        
+        // Extract text variables
+        if let Some(start) = content.find("\"text_variables\"") {
+            if let Some(brace_start) = content[start..].find('{') {
+                let vars_start = start + brace_start;
+                if let Some(brace_end) = Self::find_matching_brace(&content[vars_start..]) {
+                    let vars_content = &content[vars_start + 1..vars_start + brace_end];
+                    Self::parse_text_variables(vars_content, &mut project.settings.text_vars);
+                }
+            }
+        }
+
+        // Extract net classes
+        if let Some(start) = content.find("\"net_classes\"") {
+            if let Some(bracket_start) = content[start..].find('[') {
+                let classes_start = start + bracket_start;
+                if let Some(bracket_end) = Self::find_matching_bracket(&content[classes_start..]) {
+                    let classes_content = &content[classes_start + 1..classes_start + bracket_end];
+                    Self::parse_net_classes(classes_content, &mut project.settings.net_classes);
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Find matching closing brace.
+    fn find_matching_brace(s: &str) -> Option<usize> {
+        let mut depth = 0;
+        for (i, c) in s.chars().enumerate() {
+            match c {
+                '{' => depth += 1,
+                '}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some(i);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    /// Find matching closing bracket.
+    fn find_matching_bracket(s: &str) -> Option<usize> {
+        let mut depth = 0;
+        for (i, c) in s.chars().enumerate() {
+            match c {
+                '[' => depth += 1,
+                ']' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        return Some(i);
+                    }
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    /// Parse text variables from JSON object content.
+    fn parse_text_variables(content: &str, vars: &mut std::collections::HashMap<String, String>) {
+        // Simple regex-free parsing for "key": "value" pairs
+        let mut in_key = false;
+        let mut in_value = false;
+        let mut key = String::new();
+        let mut value = String::new();
+        let mut escaped = false;
+
+        for c in content.chars() {
+            if escaped {
+                if in_key {
+                    key.push(c);
+                } else if in_value {
+                    value.push(c);
+                }
+                escaped = false;
+                continue;
+            }
+
+            match c {
+                '\\' => escaped = true,
+                '"' => {
+                    if !in_key && !in_value {
+                        in_key = true;
+                    } else if in_key {
+                        in_key = false;
+                    } else if in_value {
+                        in_value = false;
+                        if !key.is_empty() {
+                            vars.insert(key.clone(), value.clone());
+                        }
+                        key.clear();
+                        value.clear();
+                    }
+                }
+                ':' if !in_key && !in_value => {
+                    // Next string is value
+                }
+                _ if in_key => key.push(c),
+                _ if in_value => value.push(c),
+                '"' if !in_key && !key.is_empty() => in_value = true,
+                _ => {}
+            }
+            
+            // Start value after colon
+            if c == ':' && !key.is_empty() && !in_value {
+                // Look for next quote
+            }
+        }
+    }
+
+    /// Parse net classes from JSON array content.
+    fn parse_net_classes(content: &str, classes: &mut Vec<NetClassSettings>) {
+        // Parse each object in the array
+        let mut depth = 0;
+        let mut obj_start = None;
+
+        for (i, c) in content.chars().enumerate() {
+            match c {
+                '{' => {
+                    if depth == 0 {
+                        obj_start = Some(i);
+                    }
+                    depth += 1;
+                }
+                '}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        if let Some(start) = obj_start {
+                            let obj_content = &content[start + 1..i];
+                            if let Some(nc) = Self::parse_net_class(obj_content) {
+                                classes.push(nc);
+                            }
+                        }
+                        obj_start = None;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// Parse a single net class object.
+    fn parse_net_class(content: &str) -> Option<NetClassSettings> {
+        let name = Self::extract_string_value(content, "name")?;
+        let track_width = Self::extract_float_value(content, "track_width").unwrap_or(0.25);
+        let via_diameter = Self::extract_float_value(content, "via_diameter").unwrap_or(0.6);
+        let via_drill = Self::extract_float_value(content, "via_drill").unwrap_or(0.3);
+        let clearance = Self::extract_float_value(content, "clearance").unwrap_or(0.2);
+
+        Some(NetClassSettings {
+            name,
+            track_width,
+            via_diameter,
+            via_drill,
+            clearance,
+        })
+    }
+
+    /// Extract a string value from JSON-like content.
+    fn extract_string_value(content: &str, key: &str) -> Option<String> {
+        let pattern = format!("\"{}\"", key);
+        let start = content.find(&pattern)?;
+        let after_key = &content[start + pattern.len()..];
+        let colon = after_key.find(':')?;
+        let after_colon = &after_key[colon + 1..];
+        let quote_start = after_colon.find('"')?;
+        let value_start = quote_start + 1;
+        let quote_end = after_colon[value_start..].find('"')?;
+        Some(after_colon[value_start..value_start + quote_end].to_string())
+    }
+
+    /// Extract a float value from JSON-like content.
+    fn extract_float_value(content: &str, key: &str) -> Option<f64> {
+        let pattern = format!("\"{}\"", key);
+        let start = content.find(&pattern)?;
+        let after_key = &content[start + pattern.len()..];
+        let colon = after_key.find(':')?;
+        let after_colon = after_key[colon + 1..].trim_start();
+        
+        // Find the number (until comma, brace, or end)
+        let end = after_colon.find(|c: char| c == ',' || c == '}' || c == '\n').unwrap_or(after_colon.len());
+        after_colon[..end].trim().parse().ok()
+    }
+}
+
 /// KiCAD footprint importer (.kicad_mod files).
 pub struct KicadFootprintImporter;
 
@@ -1577,5 +1890,60 @@ mod tests {
         let content = "(kicad_pcb (version 1))";
         let result = KicadFootprintImporter::import_from_string(content);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_import_project_settings() {
+        let content = r#"
+{
+  "board": {
+    "design_settings": {
+      "defaults": {
+        "board_outline_line_width": 0.1
+      }
+    }
+  },
+  "net_classes": [
+    {
+      "name": "Default",
+      "track_width": 0.25,
+      "via_diameter": 0.6,
+      "via_drill": 0.3,
+      "clearance": 0.2
+    },
+    {
+      "name": "Power",
+      "track_width": 0.5,
+      "via_diameter": 0.8,
+      "via_drill": 0.4,
+      "clearance": 0.3
+    }
+  ],
+  "text_variables": {
+    "COMPANY": "Acme Corp",
+    "PROJECT": "Widget v1.0"
+  }
+}
+"#;
+
+        let project = KicadProjectImporter::import_from_string(content, "TestProject").unwrap();
+        
+        assert_eq!(project.name, "TestProject");
+        assert_eq!(project.settings.net_classes.len(), 2);
+        assert_eq!(project.settings.net_classes[0].name, "Default");
+        assert!((project.settings.net_classes[0].track_width - 0.25).abs() < 0.001);
+        assert_eq!(project.settings.net_classes[1].name, "Power");
+        assert!((project.settings.net_classes[1].track_width - 0.5).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_import_project_empty() {
+        let content = "{}";
+        let project = KicadProjectImporter::import_from_string(content, "Empty").unwrap();
+        
+        assert_eq!(project.name, "Empty");
+        assert!(project.settings.net_classes.is_empty());
+        assert!(project.schematics.is_empty());
+        assert!(project.layout.is_none());
     }
 }
