@@ -402,7 +402,7 @@ Use these keywords to navigate to relevant `.md` files:
 | 1.14.1 | KiCAD schematic import | ✅ | `kicad.rs` | 6 | .kicad_sch |
 | 1.14.2 | KiCAD symbol import | ✅ | `kicad.rs` | - | .kicad_sym |
 | 1.14.3 | KiCAD PCB import | ✅ | `kicad.rs` | 3 | .kicad_pcb |
-| 1.14.4 | KiCAD footprint import | 📋 | - | - | .kicad_mod |
+| 1.14.4 | KiCAD footprint import | ✅ | `kicad.rs` | 3 | .kicad_mod |
 | 1.14.5 | KiCAD project import | 📋 | - | - | .kicad_pro |
 | 1.14.6 | Altium schematic import | 📋 | - | - | .SchDoc |
 | 1.14.7 | Altium PCB import | 📋 | - | - | .PcbDoc |
@@ -871,13 +871,13 @@ Use these keywords to navigate to relevant `.md` files:
 
 | Phase | Total Items | Complete | In Progress | Planned |
 |-------|-------------|----------|-------------|---------|
-| Phase 1: Foundation | 234 | 92 | 4 | 138 |
+| Phase 1: Foundation | 234 | 93 | 4 | 137 |
 | Phase 2: Professional | 72 | 10 | 0 | 62 |
 | Phase 3: Innovation | 56 | 12 | 0 | 44 |
 | Phase 4: AI Integration | 22 | 0 | 0 | 22 |
 | Phase 5: Ecosystem | 25 | 0 | 0 | 25 |
 | UI Framework | 54 | 0 | 1 | 53 |
-| **Total** | **463** | **114** | **5** | **344** |
+| **Total** | **463** | **115** | **5** | **343** |
 
 **Overall Progress:** ~25% complete (Phase 1: ~39%)
 
@@ -886,7 +886,7 @@ Use these keywords to navigate to relevant `.md` files:
 ## Test Summary
 
 ```
-Total Tests: 99 passing
+Total Tests: 102 passing
 
 hwt-core:
   - bom: 8

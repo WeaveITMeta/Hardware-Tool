@@ -1159,6 +1159,143 @@ impl KicadPcbImporter {
     }
 }
 
+/// A footprint definition (library footprint, not placed on board).
+#[derive(Debug, Clone)]
+pub struct Footprint {
+    /// Footprint name
+    pub name: String,
+    /// Library name (if known)
+    pub library: Option<String>,
+    /// Description
+    pub description: Option<String>,
+    /// Keywords for searching
+    pub keywords: Option<String>,
+    /// Pads
+    pub pads: Vec<Pad>,
+    /// Courtyard width
+    pub courtyard_width: Option<f64>,
+    /// Courtyard height
+    pub courtyard_height: Option<f64>,
+    /// 3D model path
+    pub model_3d: Option<String>,
+}
+
+impl Footprint {
+    /// Create a new empty footprint.
+    pub fn new(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            library: None,
+            description: None,
+            keywords: None,
+            pads: Vec::new(),
+            courtyard_width: None,
+            courtyard_height: None,
+            model_3d: None,
+        }
+    }
+}
+
+/// KiCAD footprint importer (.kicad_mod files).
+pub struct KicadFootprintImporter;
+
+impl KicadFootprintImporter {
+    /// Import a KiCAD footprint file.
+    pub fn import<P: AsRef<Path>>(path: P) -> KicadResult<Footprint> {
+        let content = fs::read_to_string(path.as_ref()).map_err(|e| KicadError {
+            message: format!("Failed to read file: {}", e),
+            line: None,
+        })?;
+
+        Self::import_from_string(&content)
+    }
+
+    /// Import from string content.
+    pub fn import_from_string(content: &str) -> KicadResult<Footprint> {
+        let mut parser = SExprParser::new(content);
+        let expr = parser.parse()?;
+
+        // Footprint files can start with "module" (older) or "footprint" (newer)
+        let tag = expr.tag();
+        if tag != Some("footprint") && tag != Some("module") {
+            return Err(KicadError {
+                message: "Not a valid KiCAD footprint file".to_string(),
+                line: None,
+            });
+        }
+
+        let name = expr.get_atom(1).unwrap_or("Unknown").to_string();
+        let mut footprint = Footprint::new(name);
+
+        // Parse description
+        footprint.description = expr.find("descr")
+            .and_then(|e| e.get_atom(1))
+            .map(|s| s.to_string());
+
+        // Parse keywords
+        footprint.keywords = expr.find("tags")
+            .and_then(|e| e.get_atom(1))
+            .map(|s| s.to_string());
+
+        // Parse pads
+        for pad_expr in expr.find_all("pad") {
+            if let Ok(pad) = KicadPcbImporter::parse_pad(pad_expr) {
+                footprint.pads.push(pad);
+            }
+        }
+
+        // Parse courtyard from fp_rect or fp_poly on F.CrtYd layer
+        for rect_expr in expr.find_all("fp_rect") {
+            if let Some(layer) = rect_expr.find("layer").and_then(|e| e.get_atom(1)) {
+                if layer.contains("CrtYd") {
+                    if let (Some(start), Some(end)) = (rect_expr.find("start"), rect_expr.find("end")) {
+                        let x1 = start.get_f64(1).unwrap_or(0.0);
+                        let y1 = start.get_f64(2).unwrap_or(0.0);
+                        let x2 = end.get_f64(1).unwrap_or(0.0);
+                        let y2 = end.get_f64(2).unwrap_or(0.0);
+                        footprint.courtyard_width = Some((x2 - x1).abs());
+                        footprint.courtyard_height = Some((y2 - y1).abs());
+                    }
+                }
+            }
+        }
+
+        // Parse 3D model
+        footprint.model_3d = expr.find("model")
+            .and_then(|e| e.get_atom(1))
+            .map(|s| s.to_string());
+
+        Ok(footprint)
+    }
+
+    /// Import multiple footprints from a library directory.
+    pub fn import_library<P: AsRef<Path>>(path: P) -> KicadResult<Vec<Footprint>> {
+        let path = path.as_ref();
+        let mut footprints = Vec::new();
+
+        if path.is_dir() {
+            for entry in fs::read_dir(path).map_err(|e| KicadError {
+                message: format!("Failed to read directory: {}", e),
+                line: None,
+            })? {
+                let entry = entry.map_err(|e| KicadError {
+                    message: format!("Failed to read entry: {}", e),
+                    line: None,
+                })?;
+                
+                let file_path = entry.path();
+                if file_path.extension().map_or(false, |ext| ext == "kicad_mod") {
+                    if let Ok(fp) = Self::import(&file_path) {
+                        footprints.push(fp);
+                    }
+                }
+            }
+        }
+
+        Ok(footprints)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1374,6 +1511,71 @@ mod tests {
     fn test_import_pcb_invalid_file() {
         let content = "(kicad_sch (version 1))";
         let result = KicadPcbImporter::import_from_string(content);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_import_footprint_smd() {
+        let content = r#"
+(footprint "Resistor_SMD:R_0603_1608Metric"
+  (version 20230121)
+  (generator "pcbnew")
+  (descr "Resistor SMD 0603 (1608 Metric)")
+  (tags "resistor 0603")
+  
+  (pad "1" smd rect (at -0.8 0) (size 0.8 0.9) (layers "F.Cu" "F.Paste" "F.Mask"))
+  (pad "2" smd rect (at 0.8 0) (size 0.8 0.9) (layers "F.Cu" "F.Paste" "F.Mask"))
+  
+  (fp_rect (start -1.5 -0.8) (end 1.5 0.8) (layer "F.CrtYd") (stroke (width 0.05)))
+  
+  (model "${KICAD7_3DMODEL_DIR}/Resistor_SMD.3dshapes/R_0603_1608Metric.wrl")
+)
+"#;
+
+        let footprint = KicadFootprintImporter::import_from_string(content).unwrap();
+        
+        assert_eq!(footprint.name, "Resistor_SMD:R_0603_1608Metric");
+        assert_eq!(footprint.description, Some("Resistor SMD 0603 (1608 Metric)".to_string()));
+        assert_eq!(footprint.keywords, Some("resistor 0603".to_string()));
+        assert_eq!(footprint.pads.len(), 2);
+        assert_eq!(footprint.pads[0].number, "1");
+        assert_eq!(footprint.pads[1].number, "2");
+        assert!(footprint.courtyard_width.is_some());
+        assert!(footprint.model_3d.is_some());
+    }
+
+    #[test]
+    fn test_import_footprint_thru_hole() {
+        let content = r#"
+(footprint "Package_DIP:DIP-8_W7.62mm"
+  (version 20230121)
+  (generator "pcbnew")
+  (descr "8-lead through-hole DIP package")
+  (tags "DIP 8 through-hole")
+  
+  (pad "1" thru_hole rect (at -3.81 -3.81) (size 1.6 1.6) (drill 0.8))
+  (pad "2" thru_hole circle (at -3.81 -1.27) (size 1.6 1.6) (drill 0.8))
+  (pad "3" thru_hole circle (at -3.81 1.27) (size 1.6 1.6) (drill 0.8))
+  (pad "4" thru_hole circle (at -3.81 3.81) (size 1.6 1.6) (drill 0.8))
+  (pad "5" thru_hole circle (at 3.81 3.81) (size 1.6 1.6) (drill 0.8))
+  (pad "6" thru_hole circle (at 3.81 1.27) (size 1.6 1.6) (drill 0.8))
+  (pad "7" thru_hole circle (at 3.81 -1.27) (size 1.6 1.6) (drill 0.8))
+  (pad "8" thru_hole circle (at 3.81 -3.81) (size 1.6 1.6) (drill 0.8))
+)
+"#;
+
+        let footprint = KicadFootprintImporter::import_from_string(content).unwrap();
+        
+        assert_eq!(footprint.name, "Package_DIP:DIP-8_W7.62mm");
+        assert_eq!(footprint.pads.len(), 8);
+        assert_eq!(footprint.pads[0].pad_type, PadType::ThruHole);
+        assert!((footprint.pads[0].drill - 0.8).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_import_footprint_invalid_file() {
+        let content = "(kicad_pcb (version 1))";
+        let result = KicadFootprintImporter::import_from_string(content);
         assert!(result.is_err());
     }
 }
