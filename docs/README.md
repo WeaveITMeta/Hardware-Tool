@@ -93,38 +93,45 @@ A revolutionary, pure-Rust EDA suite that transcends traditional boundaries. Fro
 
 ### Integrated Circuit Design
 
+- [IC Design Module](./ic-design/README.md) - Complete IC design documentation index
 - [IC Design Overview](./ic-design/integrated-circuit-design.md) - Transistor-level schematic, layout, DRC, LVS, GDSII
-- PDK Support - SkyWater 130nm, GF180MCU, IHP SG13G2, commercial PDKs
-- Digital ASIC Flow - RTL synthesis, place & route, timing closure
-- Analog IC Design - Op-amps, ADCs, PLLs, custom layout
+- [IC Project Structure](./ic-design/core-architecture/ic-project-structure-and-management.md) - PDK integration, project organization
+- [Cells & Libraries](./ic-design/rtl-logic-design/cells-and-libraries.md) - Standard cells, custom cells, Liberty
+- [Physical Verification (DRC/LVS)](./ic-design/analog-mixed-signal/physical-verification-drc-lvs.md) - Design rule checks
+- [GDSII Export](./ic-design/manufacturing-output/gdsii-export.md) - Tape-out format
+- [Timing & Power Calculators](./ic-design/advanced-features/timing-and-power-calculators.md) - STA, power analysis
 
 ### Quantum Hardware Design
 
+- [Quantum Design Module](./quantum-hardware/README.md) - Complete quantum design documentation index
 - [Quantum Circuit Design](./quantum-hardware/quantum-circuit-design.md) - Superconducting qubits, photonics, trapped ions
-- Transmon & Resonator Design - CPW geometry, coupling, EM simulation
-- Quantum Control - Pulse design, gate optimization, Hamiltonian simulation
-- Fabrication Integration - Process flow, design rules, GDSII export
+- [Quantum Project Structure](./quantum-hardware/core-architecture/quantum-project-structure-and-management.md) - Project organization
+- [Qubit Placement](./quantum-hardware/layout-concepts/qubit-placement.md) - Topology, frequency assignment
+- [Decoherence & Fidelity Calculators](./quantum-hardware/advanced-features/decoherence-and-fidelity-calculators.md) - T1, T2, gate fidelity
 
 ### MEMS & Sensor Design
 
+- [MEMS Design Module](./mems-sensors/README.md) - Complete MEMS design documentation index
 - [MEMS Sensor Design](./mems-sensors/mems-sensor-design.md) - Accelerometers, gyroscopes, pressure sensors
-- Multi-Physics Simulation - FEA structural, electrostatic, thermal
-- Foundry Support - PolyMUMPs, SOIMUMPs, ThELMA, XMB10
-- Packaging Integration - Hermetic cavity, wire bond, die attach
+- [MEMS Project Structure](./mems-sensors/core-architecture/mems-project-structure-and-management.md) - Project organization
+- [MEMS Design Rule Check](./mems-sensors/layout-concepts/mems-design-rule-check.md) - Process-specific DRC
+- [Resonance & Sensitivity Calculators](./mems-sensors/advanced-features/resonance-and-sensitivity-calculators.md) - Performance analysis
 
 ### RF, Microwave & Photonics
 
+- [RF Design Module](./rf-photonics/README.md) - Complete RF/photonics documentation index
 - [RF/Microwave Design](./rf-photonics/rf-microwave-design.md) - LNA, PA, filters, antennas
-- Smith Chart & Matching - Impedance matching, S-parameters
-- Photonic Integrated Circuits - Silicon photonics, waveguides, modulators
-- EM Simulation - 3D FDTD, mode solver, radiation patterns
+- [RF Project Structure](./rf-photonics/core-architecture/rf-project-structure-and-management.md) - Project organization
+- [Microstrip & Coplanar Routing](./rf-photonics/layout-concepts/microstrip-coplanar-routing.md) - Transmission lines
+- [Insertion Loss & VSWR Calculators](./rf-photonics/advanced-features/insertion-loss-and-vswr-calculators.md) - RF performance
 
 ### Advanced Packaging & Chiplets
 
+- [Chiplet Design Module](./advanced-packaging/README.md) - Complete packaging documentation index
 - [Chiplet Integration](./advanced-packaging/chiplet-integration.md) - 2.5D/3D packaging, interposers, UCIe
-- Silicon Interposer - TSV, RDL, micro-bumps, C4 bumps
-- Fan-Out Packaging - FOWLP, RDL routing, ball grid
-- Thermal & Mechanical - Warpage, stress, thermal resistance
+- [Chiplet Project Structure](./advanced-packaging/core-architecture/chiplet-project-structure-and-management.md) - Project organization
+- [RDL & Interposer Routing](./advanced-packaging/layout-concepts/rdl-and-interposer-routing.md) - Die-to-die connections
+- [Power Integrity Calculators](./advanced-packaging/advanced-features/power-integrity-calculators.md) - PDN analysis
 
 ### Appendices
 
