@@ -98,6 +98,7 @@ These modules are shared across ALL hardware domains, providing consistent proje
 
 #### 1.8 UX/UI Design (All Domains)
 
+- [Hardware Domain Modes](./ux-ui-design/hardware-domain-modes.md) - Mode switching UI for each domain
 - [Main Window Layout](./ux-ui-design/main-window-layout.md) - Adaptive interface
 - [Interaction Patterns](./ux-ui-design/innovative-interaction-patterns.md) - Magnet cursor, gestures
 - [Visual Style Guidelines](./ux-ui-design/visual-style-guidelines.md) - Consistent aesthetics
