@@ -63,10 +63,14 @@ A modern, pure-Rust EDA suite (KiCad + TSCircuit reimagined) built with Slint + 
 - [Undo/Redo & Versioning](./advanced-features/undo-redo-versioning.md) - Command-based history, crash recovery
 - [Command-Line Interface (CLI)](./advanced-features/cli.md) - Batch processing, export, automation
 - [Calculator Tools](./advanced-features/calculator-tools.md) - Track width, via current, impedance, thermal overlay, test points
-- [Thermal Simulation](./advanced-features/thermal-simulation.md) - Physics-based Joule heating, FEM solver, heat maps
+- [Thermal Simulation](./advanced-features/thermal-simulation.md) - Physics-based Joule heating, FEM solver, heat maps, radiation
+- [Signal & Power Integrity](./advanced-features/signal-power-integrity.md) - S-parameters, eye diagrams, PDN impedance, crosstalk
+- [Electromagnetic Simulation](./advanced-features/electromagnetic-simulation.md) - EMC/EMI, near-field, radiated emissions, shielding
 - [Layout Properties & Constraints](./advanced-features/layout-properties-constraints.md) - Manual nudges, keep-out zones
 - [Real-Time Preview & Iteration](./advanced-features/realtime-preview.md) - Live schematic-to-PCB sync
+- [Real-Time Collaboration](./advanced-features/realtime-collaboration.md) - Multi-user editing, CRDT sync, design review
 - [Variant Manager](./advanced-features/variant-manager.md) - What-if design exploration, cost comparison, variant BOMs
+- [Digital Twin & AR Debug](./advanced-features/digital-twin-ar.md) - Live simulation, current flow, AR overlay, fault injection
 
 ### UX/UI Design
 
@@ -82,6 +86,7 @@ A modern, pure-Rust EDA suite (KiCad + TSCircuit reimagined) built with Slint + 
 - [API Keys Configuration](./ai-integration/api-keys-configuration.md) - Secure AI provider setup, multi-provider support
 - [Native AI Design Assistant](./ai-integration/native-ai-assistant.md) - First-party AI with direct tool access
 - [AI-Powered Routing & Optimization](./ai-integration/ai-routing-optimization.md) - First-principles optimization, 5-10x efficiency
+- [Generative AI Design](./advanced-features/generative-ai-design.md) - Spec-to-design, component selection, layout generation
 - [Benchmarking Simulator](./ai-integration/benchmarking-simulator.md) - Real-time physics-based validation
 
 ### Appendices
