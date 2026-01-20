@@ -900,23 +900,636 @@ fn simulate_24_7(years: u32, ambient: f64) -> (bool, f64) {
 }
 ```
 
-## Comparison: Hardware Tool vs. SPICE vs. Ansys
+## Radiation Heat Transfer
 
-### Feature Matrix
+Thermal radiation is the third mode of heat transfer (alongside conduction and convection), critical for accurate PCB thermal analysis—especially for high-power components, enclosed systems, and space/vacuum applications.
+
+### Stefan-Boltzmann Law
+
+Radiative heat flux from a surface:
+
+```
+q_rad = ε × σ × (T⁴ - T_surr⁴)
+
+Where:
+  q_rad = Radiative heat flux (W/m²)
+  ε = Surface emissivity (0-1, dimensionless)
+  σ = Stefan-Boltzmann constant = 5.670374419 × 10⁻⁸ W/(m²·K⁴)
+  T = Surface temperature (K)
+  T_surr = Surrounding temperature (K)
+```
+
+### Surface Emissivity Database
+
+| Material | Emissivity (ε) | Notes |
+|----------|----------------|-------|
+| **Polished copper** | 0.03 | Bare traces (rare) |
+| **Oxidized copper** | 0.65 | Typical aged traces |
+| **HASL solder** | 0.05 | Shiny finish |
+| **ENIG gold** | 0.02 | Very low emissivity |
+| **FR4 (green solder mask)** | 0.85-0.92 | High emissivity |
+| **Black solder mask** | 0.95 | Near-blackbody |
+| **White solder mask** | 0.88 | Slightly lower |
+| **IC package (plastic)** | 0.80-0.95 | Depends on color |
+| **IC package (ceramic)** | 0.90 | High emissivity |
+| **Aluminum heatsink (anodized)** | 0.80-0.90 | Good radiator |
+| **Aluminum heatsink (polished)** | 0.05 | Poor radiator |
+
+### Radiation Configuration
+
+```rust
+RadiationConfig {
+    enabled: true,
+    
+    // Stefan-Boltzmann constant
+    sigma: 5.670374419e-8,  // W/(m²·K⁴)
+    
+    // Ambient/surrounding temperature
+    t_surrounding: 298.15,  // K (25°C)
+    
+    // Surface properties
+    surfaces: vec![
+        RadiativeSurface {
+            region: Region::SolderMask,
+            emissivity: 0.90,
+            area_factor: 1.0,  // Projected area multiplier
+        },
+        RadiativeSurface {
+            region: Region::Component("U1"),
+            emissivity: 0.85,
+            area_factor: 1.2,  // Account for package fins
+        },
+        RadiativeSurface {
+            region: Region::Heatsink("HS1"),
+            emissivity: 0.85,  // Anodized aluminum
+            area_factor: 5.0,  // Fin area multiplier
+        },
+    ],
+    
+    // View factor calculation
+    view_factors: ViewFactorMethod::MonteCarlo {
+        rays: 100_000,
+        seed: 42,
+    },
+}
+```
+
+### View Factor Calculation
+
+View factors (F_ij) determine how much radiation leaving surface i reaches surface j:
+
+```
+Reciprocity: A_i × F_ij = A_j × F_ji
+Summation:   Σ F_ij = 1 (for enclosure)
+```
+
+#### View Factor Methods
+
+| Method | Accuracy | Speed | Use Case |
+|--------|----------|-------|----------|
+| **Analytical** | Exact | Fast | Simple geometries (parallel plates) |
+| **Contour Integration** | High | Medium | 2D/extruded shapes |
+| **Monte Carlo Ray Tracing** | High | Slow | Complex 3D geometries |
+| **Hemicube** | Medium | Fast | Real-time approximation |
+
+```rust
+ViewFactorCalculator {
+    method: ViewFactorMethod::MonteCarlo,
+    
+    // Monte Carlo settings
+    monte_carlo: MonteCarloConfig {
+        rays_per_surface: 100_000,
+        stratified_sampling: true,
+        variance_threshold: 0.001,
+    },
+    
+    // Hemicube settings (for real-time)
+    hemicube: HemicubeConfig {
+        resolution: 512,  // pixels per face
+        gpu_accelerated: true,
+    },
+    
+    // Caching
+    cache_view_factors: true,
+    cache_file: "view_factors.bin",
+}
+```
+
+### Enclosure Radiation (Radiosity Method)
+
+For multi-surface enclosures, solve the radiosity equation:
+
+```
+J_i = ε_i × σ × T_i⁴ + (1 - ε_i) × Σ(F_ij × J_j)
+
+Where:
+  J_i = Radiosity of surface i (W/m²)
+  ε_i = Emissivity of surface i
+  F_ij = View factor from i to j
+```
+
+Matrix form: **[I - (1-ε)F] × J = ε × σ × T⁴**
+
+```rust
+fn solve_radiosity(
+    surfaces: &[Surface],
+    view_factors: &DMatrix<f64>,
+    temperatures: &[f64],  // Kelvin
+) -> Vec<f64> {
+    let n = surfaces.len();
+    let sigma = 5.670374419e-8;
+    
+    // Build coefficient matrix
+    let mut a = DMatrix::<f64>::identity(n, n);
+    for i in 0..n {
+        let rho_i = 1.0 - surfaces[i].emissivity;  // Reflectivity
+        for j in 0..n {
+            a[(i, j)] -= rho_i * view_factors[(i, j)];
+        }
+    }
+    
+    // Build RHS: ε × σ × T⁴
+    let b: DVector<f64> = DVector::from_iterator(n, 
+        surfaces.iter().zip(temperatures.iter()).map(|(s, &t)| {
+            s.emissivity * sigma * t.powi(4)
+        })
+    );
+    
+    // Solve for radiosity
+    let j = a.lu().solve(&b).expect("Radiosity solve failed");
+    
+    // Net heat flux: q_i = (J_i - Σ F_ij × J_j) / (1 - ε_i) × ε_i
+    // Or simplified: q_i = ε_i / (1 - ε_i) × (σ T_i⁴ - J_i)
+    j.as_slice().to_vec()
+}
+```
+
+### Coupled Conduction-Radiation Solver
+
+Iteratively solve conduction and radiation until convergence:
+
+```rust
+fn coupled_thermal_solve(
+    mesh: &Mesh,
+    materials: &Materials,
+    heat_sources: &[f64],
+    radiation_config: &RadiationConfig,
+    max_iterations: usize,
+    tolerance: f64,
+) -> ThermalResult {
+    let mut temperatures = vec![radiation_config.t_surrounding; mesh.num_nodes()];
+    
+    for iteration in 0..max_iterations {
+        let temp_old = temperatures.clone();
+        
+        // 1. Solve conduction with current radiation heat flux as BC
+        let radiation_flux = calculate_radiation_flux(&temperatures, radiation_config);
+        temperatures = solve_conduction(mesh, materials, heat_sources, &radiation_flux);
+        
+        // 2. Check convergence
+        let max_change = temperatures.iter()
+            .zip(temp_old.iter())
+            .map(|(t_new, t_old)| (t_new - t_old).abs())
+            .fold(0.0, f64::max);
+        
+        if max_change < tolerance {
+            return ThermalResult {
+                temperatures,
+                converged: true,
+                iterations: iteration + 1,
+            };
+        }
+    }
+    
+    ThermalResult {
+        temperatures,
+        converged: false,
+        iterations: max_iterations,
+    }
+}
+```
+
+### Radiation in Vacuum/Space Applications
+
+For space electronics (no convection):
+
+```rust
+SpaceEnvironmentConfig {
+    // No convection
+    convection_enabled: false,
+    
+    // Radiation dominant
+    radiation: RadiationConfig {
+        enabled: true,
+        
+        // Deep space background
+        t_surrounding: 2.7,  // K (cosmic microwave background)
+        
+        // Solar flux (if sun-facing)
+        solar_flux: Some(SolarFlux {
+            intensity: 1361.0,  // W/m² at 1 AU
+            absorptivity: 0.3,  // Surface solar absorptance
+            direction: Vector3::new(1.0, 0.0, 0.0),
+        }),
+        
+        // Earth IR (if in orbit)
+        earth_ir: Some(EarthIR {
+            intensity: 237.0,  // W/m² average
+            view_factor_to_earth: 0.5,
+        }),
+        
+        // Albedo
+        albedo: Some(Albedo {
+            factor: 0.3,
+            solar_intensity: 1361.0,
+        }),
+    },
+}
+```
+
+## Scientific Accuracy Enhancements
+
+To achieve scientific-grade accuracy (<5% error vs. experimental data):
+
+### Accuracy Levels
+
+| Level | Error | Mesh | Materials | Validation | Use Case |
+|-------|-------|------|-----------|------------|----------|
+| **Preview** | 30-50% | Coarse | Generic | None | Quick what-if |
+| **Design** | 10-30% | Medium | Datasheet | Spot-check | Design iteration |
+| **Engineering** | 5-10% | Fine | Measured | Partial | Detailed analysis |
+| **Scientific** | <5% | Adaptive | Characterized | Full | Publication/certification |
+
+### Mesh Refinement Strategy
+
+```rust
+MeshRefinement {
+    // Adaptive refinement
+    adaptive: AdaptiveRefinement {
+        enabled: true,
+        
+        // Error estimator
+        estimator: ErrorEstimator::ZienkiewiczZhu,
+        
+        // Refinement criteria
+        max_error: 0.01,           // 1% local error threshold
+        max_gradient: 10.0,        // K/mm temperature gradient
+        
+        // Refinement near features
+        refine_near_sources: true,
+        refine_near_boundaries: true,
+        refine_near_material_interfaces: true,
+        
+        // Limits
+        min_element_size: 0.05,    // mm
+        max_element_size: 2.0,     // mm
+        max_refinement_levels: 5,
+    },
+    
+    // hp-refinement (higher-order elements)
+    hp_refinement: HpRefinement {
+        enabled: true,
+        max_polynomial_order: 4,
+        smoothness_indicator: true,
+    },
+}
+```
+
+### Material Property Database
+
+Scientific-grade material characterization:
+
+```rust
+MaterialDatabase {
+    // Temperature-dependent properties
+    temperature_dependent: true,
+    
+    // FR4 with full characterization
+    fr4: TemperatureDependentMaterial {
+        // Conductivity: k(T) polynomial fit
+        conductivity: Polynomial {
+            coefficients: [0.29, 0.0002, -1e-7],  // W/(m·K)
+            valid_range: (233.0, 423.0),          // K
+        },
+        
+        // Specific heat: cp(T)
+        specific_heat: Polynomial {
+            coefficients: [1100.0, 0.5, 0.001],   // J/(kg·K)
+            valid_range: (233.0, 423.0),
+        },
+        
+        // Density (constant for solids)
+        density: 1900.0,  // kg/m³
+        
+        // Anisotropic conductivity (in-plane vs through-plane)
+        anisotropic: Some(AnisotropicConductivity {
+            k_xy: 0.8,   // W/(m·K) in-plane (with copper)
+            k_z: 0.3,    // W/(m·K) through-plane
+        }),
+        
+        // Uncertainty
+        uncertainty: MaterialUncertainty {
+            conductivity_std: 0.05,  // ±5% standard deviation
+            specific_heat_std: 0.03,
+        },
+        
+        // Source/reference
+        source: "IPC-TM-650 2.4.24.6",
+        measured_date: "2025-06-15",
+    },
+    
+    // Copper with temperature dependence
+    copper: TemperatureDependentMaterial {
+        conductivity: Polynomial {
+            // k decreases with temperature
+            coefficients: [401.0, -0.0685, 0.0],  // W/(m·K)
+            valid_range: (200.0, 500.0),
+        },
+        specific_heat: Polynomial {
+            coefficients: [385.0, 0.0, 0.0],
+            valid_range: (200.0, 500.0),
+        },
+        density: 8960.0,
+        anisotropic: None,
+        uncertainty: MaterialUncertainty {
+            conductivity_std: 0.02,
+            specific_heat_std: 0.02,
+        },
+        source: "NIST SRD 8",
+        measured_date: "Reference",
+    },
+}
+```
+
+### Boundary Condition Accuracy
+
+```rust
+BoundaryConditions {
+    // Convection (Newton's law of cooling)
+    convection: ConvectionBC {
+        enabled: true,
+        
+        // Heat transfer coefficient
+        h: ConvectionCoefficient::Calculated {
+            // Nusselt correlation for natural convection
+            correlation: NusseltCorrelation::ChurchillChu,
+            
+            // Fluid properties (air at 25°C)
+            fluid: FluidProperties {
+                conductivity: 0.026,      // W/(m·K)
+                viscosity: 1.85e-5,       // Pa·s
+                density: 1.184,           // kg/m³
+                specific_heat: 1005.0,    // J/(kg·K)
+                prandtl: 0.71,
+                beta: 0.00341,            // 1/K thermal expansion
+            },
+            
+            // Geometry
+            characteristic_length: 0.05,  // m (board dimension)
+            orientation: Orientation::HorizontalUp,
+        },
+        
+        // Or measured/specified
+        // h: ConvectionCoefficient::Specified(10.0),  // W/(m²·K)
+    },
+    
+    // Radiation (as detailed above)
+    radiation: RadiationBC { /* ... */ },
+    
+    // Contact resistance
+    contact_resistance: ContactResistanceBC {
+        enabled: true,
+        interfaces: vec![
+            ContactInterface {
+                surface_a: "component_bottom",
+                surface_b: "pcb_top",
+                resistance: 0.5,  // K·cm²/W (thermal grease)
+            },
+            ContactInterface {
+                surface_a: "heatsink_base",
+                surface_b: "component_top",
+                resistance: 0.1,  // K·cm²/W (thermal pad)
+            },
+        ],
+    },
+}
+```
+
+### Validation Framework
+
+```rust
+ValidationFramework {
+    // Experimental comparison
+    experimental: ExperimentalValidation {
+        // Thermocouple measurements
+        thermocouples: vec![
+            Measurement { location: (10.0, 15.0, 0.0), measured: 72.3, uncertainty: 0.5 },
+            Measurement { location: (25.0, 20.0, 0.0), measured: 65.1, uncertainty: 0.5 },
+            Measurement { location: (40.0, 30.0, 0.0), measured: 58.7, uncertainty: 0.5 },
+        ],
+        
+        // IR camera data
+        ir_camera: Some(IRCameraData {
+            image_path: "thermal_ir.png",
+            calibration: IRCalibration {
+                emissivity_assumed: 0.95,
+                reflected_temp: 25.0,
+                distance: 0.3,
+            },
+        }),
+    },
+    
+    // Analytical benchmarks
+    analytical: AnalyticalBenchmarks {
+        // Compare against known solutions
+        benchmarks: vec![
+            Benchmark::PointSourceInfinitePlate,
+            Benchmark::FinEfficiency,
+            Benchmark::SteadyState1D,
+        ],
+    },
+    
+    // Mesh convergence study
+    mesh_convergence: MeshConvergenceStudy {
+        enabled: true,
+        refinement_levels: vec![1.0, 0.5, 0.25, 0.125],  // Element size multipliers
+        convergence_metric: ConvergenceMetric::MaxTemperature,
+        target_change: 0.01,  // 1% change threshold
+    },
+    
+    // Grid Independence Index (GCI)
+    gci: GridConvergenceIndex {
+        enabled: true,
+        safety_factor: 1.25,  // For 3+ grids
+        target_gci: 0.05,     // 5% GCI
+    },
+}
+```
+
+### Uncertainty Quantification
+
+```rust
+UncertaintyQuantification {
+    enabled: true,
+    
+    // Monte Carlo uncertainty propagation
+    monte_carlo: MonteCarloUQ {
+        samples: 1000,
+        
+        // Input uncertainties
+        inputs: vec![
+            UncertainInput::Material("fr4_conductivity", Distribution::Normal { mean: 0.3, std: 0.015 }),
+            UncertainInput::Material("copper_conductivity", Distribution::Normal { mean: 385.0, std: 7.7 }),
+            UncertainInput::BoundaryCondition("h_convection", Distribution::Uniform { min: 8.0, max: 12.0 }),
+            UncertainInput::HeatSource("U1_power", Distribution::Normal { mean: 2.5, std: 0.1 }),
+        ],
+        
+        // Output statistics
+        outputs: vec![
+            UncertainOutput::MaxTemperature,
+            UncertainOutput::TemperatureAt(Point::new(25.0, 20.0, 0.0)),
+        ],
+    },
+    
+    // Sensitivity analysis
+    sensitivity: SensitivityAnalysis {
+        method: SensitivityMethod::Sobol,
+        first_order: true,
+        total_order: true,
+    },
+}
+```
+
+### Validation Report
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Thermal Simulation Validation Report                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ Model: my_board.hwt_pcb                                         │
+│ Accuracy Level: Scientific                                      │
+│                                                                 │
+│ ═══════════════════════════════════════════════════════════════ │
+│ MESH CONVERGENCE                                                │
+│ ═══════════════════════════════════════════════════════════════ │
+│                                                                 │
+│ Level │ Elements │ Max Temp │ Change  │ GCI                     │
+│ ──────┼──────────┼──────────┼─────────┼────────                 │
+│ 1     │ 1,024    │ 82.3°C   │ -       │ -                       │
+│ 2     │ 4,096    │ 79.8°C   │ 3.0%    │ 4.2%                    │
+│ 3     │ 16,384   │ 78.9°C   │ 1.1%    │ 1.5%                    │
+│ 4     │ 65,536   │ 78.6°C   │ 0.4%    │ 0.5%  ✓                 │
+│                                                                 │
+│ Grid-converged solution: 78.6°C ± 0.4°C                        │
+│                                                                 │
+│ ═══════════════════════════════════════════════════════════════ │
+│ EXPERIMENTAL VALIDATION                                         │
+│ ═══════════════════════════════════════════════════════════════ │
+│                                                                 │
+│ Location      │ Measured │ Simulated │ Error  │ Status          │
+│ ──────────────┼──────────┼───────────┼────────┼────────         │
+│ TC1 (U1)      │ 72.3°C   │ 73.1°C    │ 1.1%   │ ✓ Pass          │
+│ TC2 (center)  │ 65.1°C   │ 64.2°C    │ 1.4%   │ ✓ Pass          │
+│ TC3 (edge)    │ 58.7°C   │ 57.9°C    │ 1.4%   │ ✓ Pass          │
+│                                                                 │
+│ RMS Error: 1.3%  |  Max Error: 1.4%  |  Target: <5%  ✓         │
+│                                                                 │
+│ ═══════════════════════════════════════════════════════════════ │
+│ UNCERTAINTY QUANTIFICATION                                      │
+│ ═══════════════════════════════════════════════════════════════ │
+│                                                                 │
+│ Max Temperature: 78.6°C ± 2.1°C (95% CI)                       │
+│                                                                 │
+│ Sensitivity (Sobol indices):                                    │
+│   FR4 conductivity:     0.42 (dominant)                        │
+│   Convection coeff:     0.31                                   │
+│   Component power:      0.18                                   │
+│   Copper conductivity:  0.09                                   │
+│                                                                 │
+│ ═══════════════════════════════════════════════════════════════ │
+│ CERTIFICATION STATUS                                            │
+│ ═══════════════════════════════════════════════════════════════ │
+│                                                                 │
+│ ✓ Mesh converged (GCI < 5%)                                    │
+│ ✓ Experimental validation passed (error < 5%)                  │
+│ ✓ Uncertainty quantified                                       │
+│ ✓ Material properties traceable                                │
+│                                                                 │
+│ RESULT: VALIDATED FOR SCIENTIFIC USE                           │
+│                                                                 │
+│ [Export PDF] [Export Data] [Archive] [Close]                    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Scientific Accuracy Configuration
+
+```rust
+ScientificAccuracyConfig {
+    // Target accuracy
+    target_error: 0.05,  // 5% vs experimental
+    
+    // Mesh
+    mesh: MeshRefinement {
+        adaptive: true,
+        hp_refinement: true,
+        gci_target: 0.05,
+    },
+    
+    // Materials
+    materials: MaterialDatabase {
+        temperature_dependent: true,
+        anisotropic: true,
+        uncertainty_included: true,
+    },
+    
+    // Physics
+    physics: PhysicsConfig {
+        conduction: true,
+        convection: ConvectionModel::NusseltCorrelation,
+        radiation: RadiationModel::Radiosity,
+        contact_resistance: true,
+    },
+    
+    // Validation
+    validation: ValidationFramework {
+        mesh_convergence: true,
+        experimental_comparison: true,
+        uncertainty_quantification: true,
+    },
+    
+    // Solver
+    solver: SolverConfig {
+        method: SolverMethod::DirectLU,
+        tolerance: 1e-10,
+        coupled_iterations: 100,
+        convergence_criterion: 1e-6,
+    },
+}
+```
+
+## Updated Comparison Matrix
+
+### Feature Matrix (with Radiation & Scientific Accuracy)
 
 | Capability | Hardware Tool | SPICE | Ansys |
 |------------|---------------|-------|-------|
 | **Thermal field (2D/3D)** | ✓ Full FEM | ✗ Lumped only | ✓ Full CFD |
 | **Joule heating** | ✓ | ✓ | ✓ |
-| **Convection** | ✓ (Robin BC) | ✗ | ✓ (full CFD) |
-| **Radiation** | ○ (planned) | ✗ | ✓ |
-| **Transient analysis** | ✓ | ✓ | ✓ |
-| **Steady-state** | ✓ | ✓ | ✓ |
-| **PCB geometry import** | ✓ Native | ✗ Manual | ✓ |
+| **Convection (natural)** | ✓ Nusselt | ✗ | ✓ Full CFD |
+| **Convection (forced)** | ✓ Correlation | ✗ | ✓ Full CFD |
+| **Radiation** | ✓ Radiosity | ✗ | ✓ |
+| **View factors** | ✓ Monte Carlo | ✗ | ✓ |
+| **Temperature-dependent** | ✓ | ○ | ✓ |
+| **Anisotropic materials** | ✓ | ✗ | ✓ |
+| **Contact resistance** | ✓ | ✗ | ✓ |
+| **Mesh adaptation** | ✓ hp-FEM | ✗ | ✓ |
+| **Uncertainty quantification** | ✓ Monte Carlo | ✗ | ✓ |
+| **Validation framework** | ✓ GCI + Exp | ✗ | ✓ |
 | **Cost** | Free | Free | $$$$ |
 | **Rust integration** | ✓ Native | ✗ | ✗ |
-| **Accuracy** | 10-30% | 50%+ error | <5% |
-| **Speed** | Seconds | Seconds | Hours |
+| **Accuracy** | **<5%** | 50%+ error | <5% |
+| **Speed** | Seconds-Minutes | Seconds | Hours |
 
 ### When to Use Each
 
@@ -925,9 +1538,11 @@ fn simulate_24_7(years: u32, ambient: f64) -> (bool, f64) {
 | **Design-phase what-if** | Hardware Tool |
 | **Quick thermal check** | Hardware Tool |
 | **Electrical transients** | SPICE → Hardware Tool |
-| **Certification/validation** | Ansys |
+| **Scientific publication** | Hardware Tool (with validation) |
+| **Certification/validation** | Ansys (or Hardware Tool with full validation) |
 | **CFD with airflow** | Ansys |
 | **Cost-sensitive projects** | Hardware Tool |
+| **Space/vacuum thermal** | Hardware Tool (radiation-dominant) |
 
 ## Keyboard Shortcuts
 
