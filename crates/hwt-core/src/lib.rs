@@ -26,6 +26,7 @@ pub mod netclass;
 pub mod programmatic;
 pub mod project;
 pub mod routing;
+pub mod spice;
 pub mod schematic;
 pub mod sync;
 pub mod units;
