@@ -3,6 +3,7 @@
 
 import { Theme } from "theme.slint";
 
+// Domain selector button (dropdown is rendered at window level for proper z-index)
 export component DomainSelector inherits Rectangle {
     in property <int> current-domain: 0;
     in property <[string]> domain-names: ["PCB", "IC", "Quantum", "MEMS", "RF", "Packaging"];
@@ -49,65 +50,69 @@ export component DomainSelector inherits Rectangle {
             dropdown-open = !dropdown-open;
         }
     }
+}
+
+// Separate dropdown overlay component to be rendered at window level
+export component DomainDropdown inherits Rectangle {
+    in property <int> current-domain: 0;
+    in property <[string]> domain-names: ["PCB", "IC", "Quantum", "MEMS", "RF", "Packaging"];
+    in property <[string]> domain-icons: ["🔲", "🔷", "⚛️", "📡", "📶", "📦"];
+    in property <[color]> domain-colors: [#B87333, #3498DB, #9B59B6, #1ABC9C, #E67E22, #7F8C8D];
+    callback domain-selected(int);
+    callback close-requested;
     
-    // Dropdown menu
-    if dropdown-open: Rectangle {
-        x: 0px;
-        y: parent.height + 4px;
-        width: 160px;
-        height: 6 * 36px + 8px;
-        background: Theme.bg-elevated;
-        border-radius: Theme.radius-md;
-        border-width: 1px;
-        border-color: Theme.border-default;
-        drop-shadow-blur: 12px;
-        drop-shadow-color: #00000060;
-        drop-shadow-offset-y: 4px;
+    width: 160px;
+    height: 6 * 36px + 8px;
+    background: Theme.bg-elevated;
+    border-radius: Theme.radius-md;
+    border-width: 1px;
+    border-color: Theme.border-default;
+    drop-shadow-blur: 12px;
+    drop-shadow-color: #00000060;
+    drop-shadow-offset-y: 4px;
+    
+    VerticalLayout {
+        padding: 4px;
+        spacing: 0px;
         
-        VerticalLayout {
-            padding: 4px;
-            spacing: 0px;
+        for domain[idx] in domain-names: Rectangle {
+            height: 36px;
+            background: idx == current-domain ? domain-colors[idx].with-alpha(0.2) : 
+                        item-ta.has-hover ? Theme.bg-tertiary : transparent;
+            border-radius: Theme.radius-sm;
             
-            for domain[idx] in domain-names: Rectangle {
-                height: 36px;
-                background: idx == current-domain ? domain-colors[idx].with-alpha(0.2) : 
-                            item-ta.has-hover ? Theme.bg-tertiary : transparent;
-                border-radius: Theme.radius-sm;
+            HorizontalLayout {
+                padding-left: Theme.spacing-md;
+                padding-right: Theme.spacing-md;
+                spacing: Theme.spacing-sm;
                 
-                HorizontalLayout {
-                    padding-left: Theme.spacing-md;
-                    padding-right: Theme.spacing-md;
-                    spacing: Theme.spacing-sm;
-                    
-                    Text {
-                        text: domain-icons[idx];
-                        font-size: 16px;
-                        vertical-alignment: center;
-                    }
-                    
-                    Text {
-                        text: domain;
-                        color: idx == current-domain ? domain-colors[idx] : Theme.text-primary;
-                        font-size: 13px;
-                        font-weight: idx == current-domain ? 600 : 400;
-                        vertical-alignment: center;
-                    }
-                    
-                    Rectangle { }
-                    
-                    if idx == current-domain: Text {
-                        text: "✓";
-                        color: domain-colors[idx];
-                        font-size: 14px;
-                        vertical-alignment: center;
-                    }
+                Text {
+                    text: domain-icons[idx];
+                    font-size: 16px;
+                    vertical-alignment: center;
                 }
                 
-                item-ta := TouchArea {
-                    clicked => {
-                        root.domain-changed(idx);
-                        root.dropdown-open = false;
-                    }
+                Text {
+                    text: domain;
+                    color: idx == current-domain ? domain-colors[idx] : Theme.text-primary;
+                    font-size: 13px;
+                    font-weight: idx == current-domain ? 600 : 400;
+                    vertical-alignment: center;
+                }
+                
+                Rectangle { }
+                
+                if idx == current-domain: Text {
+                    text: "✓";
+                    color: domain-colors[idx];
+                    font-size: 14px;
+                    vertical-alignment: center;
+                }
+            }
+            
+            item-ta := TouchArea {
+                clicked => {
+                    root.domain-selected(idx);
                 }
             }
         }
@@ -180,6 +185,7 @@ export component TitleBar inherits Rectangle {
     in property <bool> unsaved: false;
     in property <int> current-domain: 0;
     in property <int> current-view: 0;
+    in-out property <bool> domain-dropdown-open: false;
     
     callback domain-changed(int);
     callback view-changed(int);
@@ -220,9 +226,10 @@ export component TitleBar inherits Rectangle {
             }
         }
         
-        // Domain selector
-        DomainSelector {
+        // Domain selector button
+        domain-selector := DomainSelector {
             current-domain: root.current-domain;
+            dropdown-open <=> root.domain-dropdown-open;
             domain-changed(d) => { root.domain-changed(d); }
         }
         
