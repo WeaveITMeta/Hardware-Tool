@@ -76,4 +76,10 @@ export global Theme {
     
     // Bottom bar height
     out property <length> bottombar-height: 28px;
+    
+    // Tooltip state (global so it renders at window level)
+    in-out property <string> tooltip-text: "";
+    in-out property <length> tooltip-x: 0px;
+    in-out property <length> tooltip-y: 0px;
+    in-out property <bool> tooltip-visible: false;
 }

@@ -1,0 +1,79 @@
+// Tooltip Component
+// Provides delayed tooltip display on hover
+
+import { Theme } from "theme.slint";
+
+// Wrap any element with this to add tooltip support
+export component TooltipArea inherits Rectangle {
+    in property <string> tooltip-text: "";
+    in property <duration> delay: 500ms;
+    
+    callback clicked;
+    
+    background: transparent;
+    
+    ta := TouchArea {
+        mouse-cursor: pointer;
+        
+        clicked => {
+            root.clicked();
+        }
+        
+        moved => {
+            if self.has-hover && tooltip-text != "" {
+                // Update tooltip position (offset from cursor)
+                Theme.tooltip-x = self.mouse-x + root.absolute-position.x + 12px;
+                Theme.tooltip-y = self.mouse-y + root.absolute-position.y + 20px;
+            }
+        }
+    }
+    
+    // Timer for delayed tooltip show
+    hover-timer := Timer {
+        interval: root.delay;
+        running: ta.has-hover && tooltip-text != "";
+        
+        triggered => {
+            if ta.has-hover {
+                Theme.tooltip-text = root.tooltip-text;
+                Theme.tooltip-visible = true;
+            }
+        }
+    }
+    
+    // Hide tooltip when hover ends
+    if !ta.has-hover: Rectangle {
+        width: 0px;
+        height: 0px;
+        init => {
+            Theme.tooltip-visible = false;
+        }
+    }
+}
+
+// The actual tooltip display component (render at window level)
+export component TooltipOverlay inherits Rectangle {
+    visible: Theme.tooltip-visible && Theme.tooltip-text != "";
+    x: Theme.tooltip-x;
+    y: Theme.tooltip-y;
+    
+    // Auto-size to content
+    width: tooltip-label.preferred-width + 16px;
+    height: tooltip-label.preferred-height + 8px;
+    
+    background: Theme.bg-elevated;
+    border-radius: Theme.radius-sm;
+    border-width: 1px;
+    border-color: Theme.border-default;
+    drop-shadow-blur: 8px;
+    drop-shadow-color: #00000080;
+    drop-shadow-offset-y: 2px;
+    
+    tooltip-label := Text {
+        x: 8px;
+        y: 4px;
+        text: Theme.tooltip-text;
+        color: Theme.text-primary;
+        font-size: 11px;
+    }
+}

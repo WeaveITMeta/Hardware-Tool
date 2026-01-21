@@ -221,12 +221,14 @@ export component DomainDropdown inherits Rectangle {
 export component ViewTab inherits Rectangle {
     in property <string> label;
     in property <string> icon;
+    in property <string> tooltip: "";
+    in property <string> shortcut: "";
     in property <bool> active: false;
     callback clicked;
     
     width: self.preferred-width;
     height: 32px;
-    background: active ? Theme.bg-tertiary : transparent;
+    background: active ? Theme.bg-tertiary : ta.has-hover ? Theme.bg-tertiary.with-alpha(0.5) : transparent;
     border-radius: Theme.radius-md;
     
     HorizontalLayout {
@@ -249,14 +251,42 @@ export component ViewTab inherits Rectangle {
         }
     }
     
-    TouchArea {
+    ta := TouchArea {
         clicked => { root.clicked(); }
+        
+        moved => {
+            if self.has-hover && (root.tooltip != "" || root.shortcut != "") {
+                Theme.tooltip-x = self.mouse-x + root.absolute-position.x;
+                Theme.tooltip-y = root.absolute-position.y + root.height + 4px;
+            }
+        }
+    }
+    
+    // Timer for delayed tooltip
+    Timer {
+        interval: 500ms;
+        running: ta.has-hover && (root.tooltip != "" || root.shortcut != "");
+        triggered => {
+            if ta.has-hover {
+                Theme.tooltip-text = root.tooltip != "" ? 
+                    (root.shortcut != "" ? root.tooltip + " (" + root.shortcut + ")" : root.tooltip) :
+                    root.label + " (" + root.shortcut + ")";
+                Theme.tooltip-visible = true;
+            }
+        }
+    }
+    
+    // Hide tooltip when not hovering
+    if !ta.has-hover: Rectangle {
+        init => {
+            Theme.tooltip-visible = false;
+        }
     }
 }
 
 export component IconButton inherits Rectangle {
     in property <string> icon;
-    in property <string> tooltip;
+    in property <string> tooltip: "";
     in property <bool> enabled: true;
     callback clicked;
     
@@ -276,6 +306,32 @@ export component IconButton inherits Rectangle {
     ta := TouchArea {
         enabled: root.enabled;
         clicked => { root.clicked(); }
+        
+        moved => {
+            if self.has-hover && root.tooltip != "" {
+                Theme.tooltip-x = self.mouse-x + root.absolute-position.x + 8px;
+                Theme.tooltip-y = self.mouse-y + root.absolute-position.y + 24px;
+            }
+        }
+    }
+    
+    // Timer for delayed tooltip
+    Timer {
+        interval: 500ms;
+        running: ta.has-hover && root.tooltip != "";
+        triggered => {
+            if ta.has-hover {
+                Theme.tooltip-text = root.tooltip;
+                Theme.tooltip-visible = true;
+            }
+        }
+    }
+    
+    // Hide tooltip when not hovering
+    if !ta.has-hover: Rectangle {
+        init => {
+            Theme.tooltip-visible = false;
+        }
     }
 }
 
@@ -398,6 +454,8 @@ export component TitleBar inherits Rectangle {
             ViewTab {
                 icon: "📐";
                 label: "Schematic";
+                tooltip: "Schematic Editor";
+                shortcut: "F1";
                 active: current-view == 0;
                 clicked => { root.view-changed(0); }
             }
@@ -405,6 +463,8 @@ export component TitleBar inherits Rectangle {
             ViewTab {
                 icon: "🔲";
                 label: "Layout";
+                tooltip: "PCB Layout Editor";
+                shortcut: "F2";
                 active: current-view == 1;
                 clicked => { root.view-changed(1); }
             }
@@ -412,6 +472,8 @@ export component TitleBar inherits Rectangle {
             ViewTab {
                 icon: "🎲";
                 label: "3D";
+                tooltip: "3D Viewer";
+                shortcut: "F3";
                 active: current-view == 2;
                 clicked => { root.view-changed(2); }
             }
@@ -419,6 +481,8 @@ export component TitleBar inherits Rectangle {
             ViewTab {
                 icon: "💻";
                 label: "Code";
+                tooltip: "Programmatic Design";
+                shortcut: "F4";
                 active: current-view == 3;
                 clicked => { root.view-changed(3); }
             }

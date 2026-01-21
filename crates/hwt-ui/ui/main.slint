@@ -7,6 +7,7 @@ import { LeftSidebar } from "left_sidebar.slint";
 import { RightSidebar } from "right_sidebar.slint";
 import { BottomBar } from "bottom_bar.slint";
 import { Canvas, Floating3DPanel } from "canvas.slint";
+import { TooltipOverlay } from "tooltip.slint";
 
 export component MainWindow inherits Window {
     title: "Hardware Tool";
@@ -332,4 +333,7 @@ export component MainWindow inherits Window {
             }
         }
     }
+    
+    // Tooltip overlay (z-index: 5 - topmost, above everything)
+    TooltipOverlay { }
 }
