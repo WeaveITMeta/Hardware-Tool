@@ -184,6 +184,90 @@ fn main() -> Result<(), slint::PlatformError> {
         tracing::debug!("Selection cleared");
     });
 
+    // Quick-add symbol callbacks
+    let window_weak = main_window.as_weak();
+    main_window.on_quick_add_resistor(move || {
+        tracing::info!("Quick-add: Resistor (R)");
+        if let Some(window) = window_weak.upgrade() {
+            window.set_placing_symbol(SymbolData {
+                library: "Device".into(),
+                name: "R".into(),
+                reference_prefix: "R".into(),
+                value: "10k".into(),
+            });
+            window.set_is_placing_symbol(true);
+            window.set_schematic_tool(EditorTool::PlaceSymbol);
+        }
+    });
+
+    let window_weak = main_window.as_weak();
+    main_window.on_quick_add_capacitor(move || {
+        tracing::info!("Quick-add: Capacitor (C)");
+        if let Some(window) = window_weak.upgrade() {
+            window.set_placing_symbol(SymbolData {
+                library: "Device".into(),
+                name: "C".into(),
+                reference_prefix: "C".into(),
+                value: "100nF".into(),
+            });
+            window.set_is_placing_symbol(true);
+            window.set_schematic_tool(EditorTool::PlaceSymbol);
+        }
+    });
+
+    let window_weak = main_window.as_weak();
+    main_window.on_quick_add_inductor(move || {
+        tracing::info!("Quick-add: Inductor (L)");
+        if let Some(window) = window_weak.upgrade() {
+            window.set_placing_symbol(SymbolData {
+                library: "Device".into(),
+                name: "L".into(),
+                reference_prefix: "L".into(),
+                value: "10uH".into(),
+            });
+            window.set_is_placing_symbol(true);
+            window.set_schematic_tool(EditorTool::PlaceSymbol);
+        }
+    });
+
+    let window_weak = main_window.as_weak();
+    main_window.on_quick_add_ground(move || {
+        tracing::info!("Quick-add: Ground (G)");
+        if let Some(window) = window_weak.upgrade() {
+            window.set_placing_symbol(SymbolData {
+                library: "Power".into(),
+                name: "GND".into(),
+                reference_prefix: "#PWR".into(),
+                value: "GND".into(),
+            });
+            window.set_is_placing_symbol(true);
+            window.set_schematic_tool(EditorTool::PlaceSymbol);
+        }
+    });
+
+    let window_weak = main_window.as_weak();
+    main_window.on_quick_add_vcc(move || {
+        tracing::info!("Quick-add: VCC (V)");
+        if let Some(window) = window_weak.upgrade() {
+            window.set_placing_symbol(SymbolData {
+                library: "Power".into(),
+                name: "VCC".into(),
+                reference_prefix: "#PWR".into(),
+                value: "VCC".into(),
+            });
+            window.set_is_placing_symbol(true);
+            window.set_schematic_tool(EditorTool::PlaceSymbol);
+        }
+    });
+
+    main_window.on_rotate_placement(|| {
+        tracing::info!("Rotate placement 90°");
+    });
+
+    main_window.on_delete_selected(|| {
+        tracing::info!("Delete selected elements");
+    });
+
     tracing::info!("Hardware Tool ready!");
 
     // Run the event loop

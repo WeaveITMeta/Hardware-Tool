@@ -130,6 +130,15 @@ export component MainWindow inherits Window {
     callback element-selected(string);
     callback selection-cleared;
     
+    // Quick-add symbol callbacks
+    callback quick-add-resistor;
+    callback quick-add-capacitor;
+    callback quick-add-inductor;
+    callback quick-add-ground;
+    callback quick-add-vcc;
+    callback rotate-placement;
+    callback delete-selected;
+    
     // Title bar - fixed at top
     TitleBar {
         x: 0px;
@@ -206,6 +215,15 @@ export component MainWindow inherits Window {
                 element-selected(id) => { root.element-selected(id); }
                 selection-cleared => { root.selection-cleared(); }
                 zoom-changed(z) => { root.zoom = clamp(z, 0.1, 10.0); }
+                
+                // Quick-add shortcuts
+                quick-add-resistor => { root.quick-add-resistor(); }
+                quick-add-capacitor => { root.quick-add-capacitor(); }
+                quick-add-inductor => { root.quick-add-inductor(); }
+                quick-add-ground => { root.quick-add-ground(); }
+                quick-add-vcc => { root.quick-add-vcc(); }
+                rotate-placement => { root.rotate-placement(); }
+                delete-selected => { root.delete-selected(); }
             }
             
             // Layout/3D/Code views use generic canvas

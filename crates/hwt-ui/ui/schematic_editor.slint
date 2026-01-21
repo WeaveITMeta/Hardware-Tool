@@ -605,6 +605,9 @@ export component SchematicEditor inherits Rectangle {
     in property <[JunctionView]> junctions: [];
     in property <[NetLabelView]> labels: [];
     
+    // Placement rotation state
+    in-out property <int> placement-rotation: 0;
+    
     callback tool-changed(EditorTool);
     callback mouse-moved(float, float);
     callback symbol-placed(float, float, int);
@@ -618,7 +621,19 @@ export component SchematicEditor inherits Rectangle {
     callback selection-cleared;
     callback zoom-changed(float);
     
+    // Quick-add symbol callbacks (keyboard shortcuts)
+    callback quick-add-resistor;
+    callback quick-add-capacitor;
+    callback quick-add-inductor;
+    callback quick-add-ground;
+    callback quick-add-vcc;
+    callback rotate-placement;
+    callback delete-selected;
+    
     background: Theme.bg-primary;
+    
+    // Focus for keyboard input
+    forward-focus: focus-scope;
     
     VerticalLayout {
         spacing: 0px;
@@ -639,6 +654,7 @@ export component SchematicEditor inherits Rectangle {
             wires: root.wires;
             junctions: root.junctions;
             labels: root.labels;
+            placement-rotation <=> root.placement-rotation;
             
             mouse-moved(x, y) => { root.mouse-moved(x, y); }
             symbol-placed(x, y, r) => { root.symbol-placed(x, y, r); }
@@ -651,6 +667,76 @@ export component SchematicEditor inherits Rectangle {
             element-selected(id) => { root.element-selected(id); }
             selection-cleared => { root.selection-cleared(); }
             zoom-changed(z) => { root.zoom-changed(z); }
+        }
+    }
+    
+    // Keyboard shortcuts handler
+    focus-scope := FocusScope {
+        key-pressed(event) => {
+            if event.text == "r" || event.text == "R" {
+                if event.modifiers.shift {
+                    // Shift+R = rotate placement 90°
+                    root.placement-rotation = mod(root.placement-rotation + 90, 360);
+                    root.rotate-placement();
+                } else {
+                    // R = quick add resistor
+                    root.quick-add-resistor();
+                }
+                return accept;
+            }
+            if event.text == "c" || event.text == "C" {
+                root.quick-add-capacitor();
+                return accept;
+            }
+            if event.text == "l" || event.text == "L" {
+                root.quick-add-inductor();
+                return accept;
+            }
+            if event.text == "g" || event.text == "G" {
+                root.quick-add-ground();
+                return accept;
+            }
+            if event.text == "v" || event.text == "V" {
+                root.quick-add-vcc();
+                return accept;
+            }
+            if event.text == "w" || event.text == "W" {
+                root.current-tool = EditorTool.draw-wire;
+                root.tool-changed(EditorTool.draw-wire);
+                return accept;
+            }
+            if event.text == "p" || event.text == "P" {
+                root.current-tool = EditorTool.place-symbol;
+                root.tool-changed(EditorTool.place-symbol);
+                return accept;
+            }
+            if event.text == "j" || event.text == "J" {
+                root.current-tool = EditorTool.place-junction;
+                root.tool-changed(EditorTool.place-junction);
+                return accept;
+            }
+            if event.text == "x" || event.text == "X" {
+                root.current-tool = EditorTool.place-no-connect;
+                root.tool-changed(EditorTool.place-no-connect);
+                return accept;
+            }
+            if event.text == "/" {
+                // Toggle wire mode
+                root.wire-mode = root.wire-mode == WireMode.horizontal-first ? 
+                    WireMode.vertical-first : WireMode.horizontal-first;
+                return accept;
+            }
+            if event.text == Key.Escape {
+                root.current-tool = EditorTool.select;
+                root.tool-changed(EditorTool.select);
+                root.selection-cleared();
+                return accept;
+            }
+            if event.text == Key.Delete {
+                root.delete-selected();
+                return accept;
+            }
+            return reject;
         }
     }
 }
