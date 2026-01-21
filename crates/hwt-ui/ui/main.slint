@@ -2,7 +2,7 @@
 // "One Hardware Tool That Does It All"
 
 import { Theme } from "theme.slint";
-import { TitleBar, DomainDropdown } from "title_bar.slint";
+import { TitleBar, DomainDropdown, MenuDropdown, MenuItem } from "title_bar.slint";
 import { LeftSidebar } from "left_sidebar.slint";
 import { RightSidebar } from "right_sidebar.slint";
 import { BottomBar } from "bottom_bar.slint";
@@ -27,6 +27,66 @@ export component MainWindow inherits Window {
     in-out property <bool> show-3d-panel: true;
     in-out property <bool> panel-3d-maximized: false;
     in-out property <bool> domain-dropdown-open: false;
+    in-out property <int> active-menu: 0;
+    
+    // Menu item definitions
+    property <[MenuItem]> file-menu-items: [
+        { label: "New Project", shortcut: "Ctrl+N", enabled: true, separator-after: false },
+        { label: "Open Project", shortcut: "Ctrl+O", enabled: true, separator-after: false },
+        { label: "Open Recent", shortcut: "", enabled: true, separator-after: true },
+        { label: "", shortcut: "", enabled: false, separator-after: false },
+        { label: "Save", shortcut: "Ctrl+S", enabled: true, separator-after: false },
+        { label: "Save As...", shortcut: "Ctrl+Shift+S", enabled: true, separator-after: false },
+        { label: "Export", shortcut: "Ctrl+E", enabled: true, separator-after: true },
+        { label: "", shortcut: "", enabled: false, separator-after: false },
+        { label: "Close", shortcut: "Ctrl+W", enabled: true, separator-after: false },
+        { label: "Quit", shortcut: "Ctrl+Q", enabled: true, separator-after: false },
+    ];
+    
+    property <[MenuItem]> edit-menu-items: [
+        { label: "Undo", shortcut: "Ctrl+Z", enabled: true, separator-after: false },
+        { label: "Redo", shortcut: "Ctrl+Y", enabled: true, separator-after: true },
+        { label: "", shortcut: "", enabled: false, separator-after: false },
+        { label: "Cut", shortcut: "Ctrl+X", enabled: true, separator-after: false },
+        { label: "Copy", shortcut: "Ctrl+C", enabled: true, separator-after: false },
+        { label: "Paste", shortcut: "Ctrl+V", enabled: true, separator-after: false },
+        { label: "Duplicate", shortcut: "Ctrl+D", enabled: true, separator-after: true },
+        { label: "", shortcut: "", enabled: false, separator-after: false },
+        { label: "Delete", shortcut: "Del", enabled: true, separator-after: false },
+        { label: "Select All", shortcut: "Ctrl+A", enabled: true, separator-after: false },
+    ];
+    
+    property <[MenuItem]> selection-menu-items: [
+        { label: "Select All", shortcut: "Ctrl+A", enabled: true, separator-after: false },
+        { label: "Deselect All", shortcut: "Esc", enabled: true, separator-after: false },
+        { label: "Invert Selection", shortcut: "Ctrl+I", enabled: true, separator-after: true },
+        { label: "", shortcut: "", enabled: false, separator-after: false },
+        { label: "Select by Net", shortcut: "", enabled: true, separator-after: false },
+        { label: "Select by Component", shortcut: "", enabled: true, separator-after: false },
+        { label: "Select Connected", shortcut: "", enabled: true, separator-after: false },
+    ];
+    
+    property <[MenuItem]> view-menu-items: [
+        { label: "Zoom In", shortcut: "Ctrl++", enabled: true, separator-after: false },
+        { label: "Zoom Out", shortcut: "Ctrl+-", enabled: true, separator-after: false },
+        { label: "Fit to Screen", shortcut: "Ctrl+0", enabled: true, separator-after: false },
+        { label: "Zoom to Selection", shortcut: "Ctrl+1", enabled: true, separator-after: true },
+        { label: "", shortcut: "", enabled: false, separator-after: false },
+        { label: "Toggle Grid", shortcut: "G", enabled: true, separator-after: false },
+        { label: "Toggle Ratsnest", shortcut: "R", enabled: true, separator-after: true },
+        { label: "", shortcut: "", enabled: false, separator-after: false },
+        { label: "3D Preview Panel", shortcut: "F8", enabled: true, separator-after: false },
+        { label: "Left Sidebar", shortcut: "Ctrl+[", enabled: true, separator-after: false },
+        { label: "Right Sidebar", shortcut: "Ctrl+]", enabled: true, separator-after: false },
+    ];
+    
+    property <[MenuItem]> help-menu-items: [
+        { label: "Documentation", shortcut: "F1", enabled: true, separator-after: false },
+        { label: "Keyboard Shortcuts", shortcut: "Ctrl+?", enabled: true, separator-after: true },
+        { label: "", shortcut: "", enabled: false, separator-after: false },
+        { label: "Check for Updates", shortcut: "", enabled: true, separator-after: false },
+        { label: "About Hardware Tool", shortcut: "", enabled: true, separator-after: false },
+    ];
     
     // Canvas state
     in-out property <float> zoom: 1.0;
@@ -54,6 +114,7 @@ export component MainWindow inherits Window {
             current-domain: root.current-domain;
             current-view: root.current-view;
             domain-dropdown-open <=> root.domain-dropdown-open;
+            active-menu <=> root.active-menu;
             
             domain-changed(d) => { 
                 root.current-domain = d;
@@ -192,6 +253,82 @@ export component MainWindow inherits Window {
                 Theme.current-domain = idx;
                 root.domain-changed(idx);
                 root.domain-dropdown-open = false;
+            }
+        }
+    }
+    
+    // System menu dropdowns (z-index: 4 - above domain dropdown)
+    if active-menu > 0: Rectangle {
+        // Click-away backdrop to close menu
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        
+        TouchArea {
+            clicked => {
+                root.active-menu = 0;
+            }
+        }
+        
+        // File menu
+        if active-menu == 1: MenuDropdown {
+            x: 28px + Theme.spacing-sm;
+            y: Theme.titlebar-height - 4px;
+            title: "File";
+            items: root.file-menu-items;
+            
+            item-clicked(idx) => {
+                root.active-menu = 0;
+            }
+        }
+        
+        // Edit menu
+        if active-menu == 2: MenuDropdown {
+            x: 28px + 36px + Theme.spacing-sm;
+            y: Theme.titlebar-height - 4px;
+            title: "Edit";
+            items: root.edit-menu-items;
+            
+            item-clicked(idx) => {
+                root.active-menu = 0;
+            }
+        }
+        
+        // Selection menu
+        if active-menu == 3: MenuDropdown {
+            x: 28px + 72px + Theme.spacing-sm;
+            y: Theme.titlebar-height - 4px;
+            title: "Selection";
+            items: root.selection-menu-items;
+            
+            item-clicked(idx) => {
+                root.active-menu = 0;
+            }
+        }
+        
+        // View menu
+        if active-menu == 4: MenuDropdown {
+            x: 28px + 132px + Theme.spacing-sm;
+            y: Theme.titlebar-height - 4px;
+            title: "View";
+            items: root.view-menu-items;
+            
+            item-clicked(idx) => {
+                root.active-menu = 0;
+            }
+        }
+        
+        // Help menu
+        if active-menu == 5: MenuDropdown {
+            x: 28px + 176px + Theme.spacing-sm;
+            y: Theme.titlebar-height - 4px;
+            title: "Help";
+            items: root.help-menu-items;
+            
+            item-clicked(idx) => {
+                root.active-menu = 0;
             }
         }
     }

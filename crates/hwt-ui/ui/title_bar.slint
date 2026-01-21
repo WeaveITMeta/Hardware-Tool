@@ -1,7 +1,106 @@
 // Title Bar Component
-// Contains: Mode switcher, view tabs, search, undo/redo, save, menu
+// Contains: System menus, mode switcher, view tabs, search, undo/redo, save
 
 import { Theme } from "theme.slint";
+
+// Menu item data structure
+export struct MenuItem {
+    label: string,
+    shortcut: string,
+    enabled: bool,
+    separator-after: bool,
+}
+
+// Menu bar button component
+export component MenuButton inherits Rectangle {
+    in property <string> label;
+    in-out property <bool> menu-open: false;
+    callback clicked;
+    
+    width: label-text.preferred-width + 16px;
+    height: 24px;
+    background: menu-open ? Theme.bg-tertiary : 
+                ta.has-hover ? Theme.bg-tertiary.with-alpha(0.5) : transparent;
+    border-radius: Theme.radius-sm;
+    
+    label-text := Text {
+        text: label;
+        color: Theme.text-primary;
+        font-size: 12px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    
+    ta := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// Menu dropdown component (rendered at window level)
+export component MenuDropdown inherits Rectangle {
+    in property <string> title;
+    in property <[MenuItem]> items;
+    callback item-clicked(int);
+    
+    width: 220px;
+    background: Theme.bg-elevated;
+    border-radius: Theme.radius-md;
+    border-width: 1px;
+    border-color: Theme.border-default;
+    drop-shadow-blur: 12px;
+    drop-shadow-color: #00000060;
+    drop-shadow-offset-y: 4px;
+    
+    VerticalLayout {
+        padding: 4px;
+        spacing: 0px;
+        
+        for item[idx] in items: Rectangle {
+            height: item.label == "" ? 9px : 28px;
+            
+            if item.label == "": Rectangle {
+                height: 1px;
+                y: 4px;
+                background: Theme.border-subtle;
+            }
+            
+            if item.label != "": Rectangle {
+                background: item.enabled && item-ta.has-hover ? Theme.bg-tertiary : transparent;
+                border-radius: Theme.radius-sm;
+                
+                HorizontalLayout {
+                    padding-left: Theme.spacing-md;
+                    padding-right: Theme.spacing-md;
+                    
+                    Text {
+                        text: item.label;
+                        color: item.enabled ? Theme.text-primary : Theme.text-disabled;
+                        font-size: 12px;
+                        vertical-alignment: center;
+                    }
+                    
+                    Rectangle { }
+                    
+                    Text {
+                        text: item.shortcut;
+                        color: Theme.text-tertiary;
+                        font-size: 11px;
+                        vertical-alignment: center;
+                    }
+                }
+                
+                item-ta := TouchArea {
+                    enabled: item.enabled;
+                    clicked => {
+                        root.item-clicked(idx);
+                    }
+                }
+            }
+        }
+    }
+}
 
 // Domain selector button (dropdown is rendered at window level for proper z-index)
 export component DomainSelector inherits Rectangle {
@@ -187,6 +286,9 @@ export component TitleBar inherits Rectangle {
     in property <int> current-view: 0;
     in-out property <bool> domain-dropdown-open: false;
     
+    // Menu state (which menu is open: 0=none, 1=File, 2=Edit, 3=Selection, 4=View, 5=Help)
+    in-out property <int> active-menu: 0;
+    
     callback domain-changed(int);
     callback view-changed(int);
     callback search-clicked;
@@ -195,6 +297,13 @@ export component TitleBar inherits Rectangle {
     callback save-clicked;
     callback menu-clicked;
     
+    // Menu action callbacks
+    callback file-action(int);
+    callback edit-action(int);
+    callback selection-action(int);
+    callback view-action(int);
+    callback help-action(int);
+    
     height: Theme.titlebar-height;
     background: Theme.bg-secondary;
     border-width: 0px;
@@ -202,28 +311,71 @@ export component TitleBar inherits Rectangle {
     
     HorizontalLayout {
         padding: Theme.spacing-sm;
-        spacing: Theme.spacing-md;
+        spacing: Theme.spacing-sm;
         
-        // Logo and project name
+        // Logo
+        Text {
+            text: "⚙";
+            font-size: 20px;
+            color: Theme.primary;
+            vertical-alignment: center;
+        }
+        
+        // System menu bar
         HorizontalLayout {
-            spacing: Theme.spacing-sm;
-            width: 200px;
+            spacing: 0px;
             
-            Text {
-                text: "⚙";
-                font-size: 20px;
-                color: Theme.primary;
-                vertical-alignment: center;
+            MenuButton {
+                label: "File";
+                menu-open: root.active-menu == 1;
+                clicked => { root.active-menu = root.active-menu == 1 ? 0 : 1; }
             }
             
-            Text {
-                text: project-name + (unsaved ? " •" : "");
-                color: Theme.text-primary;
-                font-size: 14px;
-                font-weight: 500;
-                vertical-alignment: center;
-                overflow: elide;
+            MenuButton {
+                label: "Edit";
+                menu-open: root.active-menu == 2;
+                clicked => { root.active-menu = root.active-menu == 2 ? 0 : 2; }
             }
+            
+            MenuButton {
+                label: "Selection";
+                menu-open: root.active-menu == 3;
+                clicked => { root.active-menu = root.active-menu == 3 ? 0 : 3; }
+            }
+            
+            MenuButton {
+                label: "View";
+                menu-open: root.active-menu == 4;
+                clicked => { root.active-menu = root.active-menu == 4 ? 0 : 4; }
+            }
+            
+            MenuButton {
+                label: "Help";
+                menu-open: root.active-menu == 5;
+                clicked => { root.active-menu = root.active-menu == 5 ? 0 : 5; }
+            }
+        }
+        
+        // Separator
+        Rectangle {
+            width: 1px;
+            background: Theme.border-subtle;
+        }
+        
+        // Project name
+        Text {
+            text: project-name + (unsaved ? " •" : "");
+            color: Theme.text-secondary;
+            font-size: 13px;
+            vertical-alignment: center;
+            overflow: elide;
+            max-width: 150px;
+        }
+        
+        // Separator
+        Rectangle {
+            width: 1px;
+            background: Theme.border-subtle;
         }
         
         // Domain selector button
