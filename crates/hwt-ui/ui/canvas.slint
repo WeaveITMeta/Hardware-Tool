@@ -79,6 +79,106 @@ export component Canvas inherits Rectangle {
     }
 }
 
+export component PcbCanvasWithRulers inherits Rectangle {
+    in property <bool> show-rulers: true;
+    in property <int> units: 0; // 0=mm, 1=in
+    in property <float> zoom: 1.0;
+    in property <bool> show-grid: true;
+    in property <float> pan-x: 0.0;
+    in property <float> pan-y: 0.0;
+
+    callback mouse-moved(float, float);
+    callback mouse-pressed(float, float);
+    callback mouse-released(float, float);
+    callback zoom-changed(float);
+    callback pan-changed(float, float);
+
+    background: Theme.bg-primary;
+
+    property <length> ruler-size: 24px;
+    property <int> tick-step-px: 50;
+
+    Rectangle {
+        visible: show-rulers;
+        x: ruler-size;
+        y: 0px;
+        width: parent.width - ruler-size;
+        height: ruler-size;
+        background: Theme.bg-secondary;
+        clip: true;
+
+        for i in 200: Rectangle {
+            x: i * tick-step-px * 1px;
+            y: ruler-size - (mod(i, 2) == 0 ? 10px : 6px);
+            width: 1px;
+            height: mod(i, 2) == 0 ? 10px : 6px;
+            background: Theme.border-strong;
+        }
+
+        for i in 200: Text {
+            visible: mod(i, 2) == 0;
+            x: i * tick-step-px * 1px + 4px;
+            y: 4px;
+            text: units == 0 ? (round((i * tick-step-px) / zoom) + "") : (round(((i * tick-step-px) / zoom) / 25.4) + "");
+            font-size: 10px;
+            color: Theme.text-tertiary;
+        }
+
+        Text {
+            x: 6px;
+            y: 4px;
+            text: units == 0 ? "mm" : "in";
+            font-size: 10px;
+            color: Theme.text-secondary;
+        }
+    }
+
+    Rectangle {
+        visible: show-rulers;
+        x: 0px;
+        y: ruler-size;
+        width: ruler-size;
+        height: parent.height - ruler-size;
+        background: Theme.bg-secondary;
+        clip: true;
+
+        for i in 200: Rectangle {
+            x: ruler-size - (mod(i, 2) == 0 ? 10px : 6px);
+            y: i * tick-step-px * 1px;
+            width: mod(i, 2) == 0 ? 10px : 6px;
+            height: 1px;
+            background: Theme.border-strong;
+        }
+
+        for i in 200: Text {
+            visible: mod(i, 2) == 0;
+            x: 2px;
+            y: i * tick-step-px * 1px + 2px;
+            text: units == 0 ? (round((i * tick-step-px) / zoom) + "") : (round(((i * tick-step-px) / zoom) / 25.4) + "");
+            font-size: 10px;
+            color: Theme.text-tertiary;
+        }
+    }
+
+    Canvas {
+        x: show-rulers ? ruler-size : 0px;
+        y: show-rulers ? ruler-size : 0px;
+        width: parent.width - (show-rulers ? ruler-size : 0px);
+        height: parent.height - (show-rulers ? ruler-size : 0px);
+
+        zoom: root.zoom;
+        show-grid: root.show-grid;
+        pan-x: root.pan-x;
+        pan-y: root.pan-y;
+
+        mouse-moved(x, y) => { root.mouse-moved(x, y); }
+        mouse-pressed(x, y) => { root.mouse-pressed(x, y); }
+        mouse-released(x, y) => { root.mouse-released(x, y); }
+        zoom-changed(z) => { root.zoom-changed(z); }
+        pan-changed(x, y) => { root.pan-changed(x, y); }
+    }
+}
+
 export component Floating3DPanel inherits Rectangle {
     in property <bool> maximized: false;
     

@@ -6,7 +6,7 @@ import { TitleBar, DomainDropdown, MenuDropdown, MenuItem } from "title_bar.slin
 import { LeftSidebar } from "left_sidebar.slint";
 import { RightSidebar } from "right_sidebar.slint";
 import { BottomBar } from "bottom_bar.slint";
-import { Canvas, Floating3DPanel } from "canvas.slint";
+import { Canvas, Floating3DPanel, PcbCanvasWithRulers } from "canvas.slint";
 import { TooltipOverlay } from "tooltip.slint";
 import { SchematicEditor, EditorTool, WireMode, SymbolData, PlacedSymbolView, WireSegmentView, JunctionView, NetLabelView, SchematicGrid } from "schematic_editor.slint";
 
@@ -79,7 +79,9 @@ export component MainWindow inherits Window {
         { label: "", shortcut: "", enabled: false, separator-after: false },
         { label: "3D Preview Panel", shortcut: "F8", enabled: true, separator-after: false },
         { label: "Left Sidebar", shortcut: "Ctrl+[", enabled: true, separator-after: false },
-        { label: "Right Sidebar", shortcut: "Ctrl+]", enabled: true, separator-after: false },
+        { label: "Right Sidebar", shortcut: "Ctrl+]", enabled: true, separator-after: true },
+        { label: "", shortcut: "", enabled: false, separator-after: false },
+        { label: "View Rulers", shortcut: "", enabled: true, separator-after: false },
     ];
     
     property <[MenuItem]> help-menu-items: [
@@ -92,6 +94,8 @@ export component MainWindow inherits Window {
     
     // Canvas state
     in-out property <float> zoom: 1.0;
+    in-out property <bool> show-rulers: true;
+    in-out property <int> pcb-units: 0; // 0=mm, 1=in
     in-out property <float> cursor-x: 0.0;
     in-out property <float> cursor-y: 0.0;
     in-out property <int> selection-count: 0;
@@ -186,6 +190,72 @@ export component MainWindow inherits Window {
             background: Theme.border-subtle;
         }
         
+        // Units sidebar (for PCB/Layout view)
+        if current-view == 1: Rectangle {
+            width: 56px;
+            background: Theme.bg-secondary;
+            
+            VerticalLayout {
+                padding-top: Theme.spacing-md;
+                padding-left: Theme.spacing-xs;
+                padding-right: Theme.spacing-xs;
+                spacing: Theme.spacing-sm;
+                
+                Text {
+                    text: "Units";
+                    font-size: 10px;
+                    color: Theme.text-tertiary;
+                    horizontal-alignment: center;
+                }
+                
+                Rectangle {
+                    height: 28px;
+                    background: root.pcb-units == 0 ? Theme.primary.with-alpha(0.2) : Theme.bg-tertiary;
+                    border-radius: Theme.radius-sm;
+                    border-width: root.pcb-units == 0 ? 1px : 0px;
+                    border-color: Theme.primary;
+                    
+                    Text {
+                        text: "mm";
+                        font-size: 11px;
+                        color: root.pcb-units == 0 ? Theme.primary : Theme.text-secondary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                    
+                    TouchArea {
+                        clicked => { root.pcb-units = 0; }
+                    }
+                }
+                
+                Rectangle {
+                    height: 28px;
+                    background: root.pcb-units == 1 ? Theme.primary.with-alpha(0.2) : Theme.bg-tertiary;
+                    border-radius: Theme.radius-sm;
+                    border-width: root.pcb-units == 1 ? 1px : 0px;
+                    border-color: Theme.primary;
+                    
+                    Text {
+                        text: "in";
+                        font-size: 11px;
+                        color: root.pcb-units == 1 ? Theme.primary : Theme.text-secondary;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                    
+                    TouchArea {
+                        clicked => { root.pcb-units = 1; }
+                    }
+                }
+            }
+        }
+        
+        // Left separator line (units)
+        if current-view == 1: Rectangle {
+            width: 1px;
+            background: Theme.border-subtle;
+        }
+        
         // Canvas area with floating 3D panel
         Rectangle {
             // Schematic editor (when in schematic view)
@@ -226,8 +296,24 @@ export component MainWindow inherits Window {
                 delete-selected => { root.delete-selected(); }
             }
             
-            // Layout/3D/Code views use generic canvas
-            if current-view != 0: Canvas {
+            // Layout view uses PCB rulers wrapper
+            if current-view == 1: PcbCanvasWithRulers {
+                zoom: root.zoom;
+                units: root.pcb-units;
+                show-rulers: root.show-rulers;
+
+                mouse-moved(x, y) => {
+                    root.cursor-x = x;
+                    root.cursor-y = y;
+                }
+
+                zoom-changed(z) => {
+                    root.zoom = clamp(z, 0.1, 10.0);
+                }
+            }
+
+            // 3D/Code views use generic canvas
+            if current-view != 0 && current-view != 1: Canvas {
                 zoom: root.zoom;
                 
                 mouse-moved(x, y) => {
@@ -414,6 +500,8 @@ export component MainWindow inherits Window {
                 if idx == 9 { root.left-sidebar-collapsed = !root.left-sidebar-collapsed; }
                 // Right Sidebar (idx 10)
                 if idx == 10 { root.right-sidebar-collapsed = !root.right-sidebar-collapsed; }
+                // View Rulers (idx 12)
+                if idx == 12 { root.show-rulers = !root.show-rulers; }
             }
         }
         
