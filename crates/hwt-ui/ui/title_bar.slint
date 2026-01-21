@@ -262,8 +262,8 @@ export component ViewTab inherits Rectangle {
         
         moved => {
             if self.has-hover && (root.tooltip != "" || root.shortcut != "") {
-                Theme.tooltip-x = self.mouse-x + root.absolute-position.x;
-                Theme.tooltip-y = root.absolute-position.y + root.height + 4px;
+                Theme.tooltip-x = self.mouse-x + root.absolute-position.x + 16px;
+                Theme.tooltip-y = self.mouse-y + root.absolute-position.y + 16px;
             }
         }
     }
@@ -315,8 +315,8 @@ export component IconButton inherits Rectangle {
         
         moved => {
             if self.has-hover && root.tooltip != "" {
-                Theme.tooltip-x = self.mouse-x + root.absolute-position.x + 8px;
-                Theme.tooltip-y = self.mouse-y + root.absolute-position.y + 24px;
+                Theme.tooltip-x = self.mouse-x + root.absolute-position.x + 16px;
+                Theme.tooltip-y = self.mouse-y + root.absolute-position.y + 16px;
             }
         }
     }
