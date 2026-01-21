@@ -107,101 +107,109 @@ export component MainWindow inherits Window {
     callback redo-requested;
     callback search-requested;
     
-    VerticalLayout {
-        // Title bar
-        title-bar := TitleBar {
-            project-name: root.project-name;
-            unsaved: root.unsaved;
-            current-domain: root.current-domain;
-            current-view: root.current-view;
-            domain-dropdown-open <=> root.domain-dropdown-open;
-            active-menu <=> root.active-menu;
-            
-            domain-changed(d) => { 
-                root.current-domain = d;
-                Theme.current-domain = d;
-                root.domain-changed(d); 
-            }
-            view-changed(v) => { 
-                root.current-view = v;
-                root.view-changed(v); 
-            }
-            search-clicked => { root.search-requested(); }
-            undo-clicked => { root.undo-requested(); }
-            redo-clicked => { root.redo-requested(); }
-            save-clicked => { root.save-requested(); }
-            menu-clicked => { }
+    // Title bar - fixed at top
+    TitleBar {
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        project-name: root.project-name;
+        unsaved: root.unsaved;
+        current-domain: root.current-domain;
+        current-view: root.current-view;
+        domain-dropdown-open <=> root.domain-dropdown-open;
+        active-menu <=> root.active-menu;
+        
+        domain-changed(d) => { 
+            root.current-domain = d;
+            Theme.current-domain = d;
+            root.domain-changed(d); 
+        }
+        view-changed(v) => { 
+            root.current-view = v;
+            root.view-changed(v); 
+        }
+        search-clicked => { root.search-requested(); }
+        undo-clicked => { root.undo-requested(); }
+        redo-clicked => { root.redo-requested(); }
+        save-clicked => { root.save-requested(); }
+        menu-clicked => { }
+    }
+    
+    // Main content area - positioned below title bar
+    HorizontalLayout {
+        x: 0px;
+        y: Theme.titlebar-height;
+        width: 100%;
+        height: root.height - Theme.titlebar-height - Theme.bottombar-height;
+        spacing: 0px;
+        
+        // Left sidebar
+        LeftSidebar {
+            collapsed: root.left-sidebar-collapsed;
         }
         
-        // Main content area
-        HorizontalLayout {
-            spacing: 0px;
-            
-            // Left sidebar
-            LeftSidebar {
-                collapsed: root.left-sidebar-collapsed;
-            }
-            
-            // Left separator line
-            Rectangle {
-                width: 1px;
-                background: Theme.border-subtle;
-            }
-            
-            // Canvas area with floating 3D panel
-            Rectangle {
-                // Main canvas (z-index: 0 - bottom layer)
-                Canvas {
-                    zoom: root.zoom;
-                    
-                    mouse-moved(x, y) => {
-                        root.cursor-x = x;
-                        root.cursor-y = y;
-                    }
-                    
-                    zoom-changed(z) => {
-                        root.zoom = clamp(z, 0.1, 10.0);
-                    }
+        // Left separator line
+        Rectangle {
+            width: 1px;
+            background: Theme.border-subtle;
+        }
+        
+        // Canvas area with floating 3D panel
+        Rectangle {
+            // Main canvas (z-index: 0 - bottom layer)
+            Canvas {
+                zoom: root.zoom;
+                
+                mouse-moved(x, y) => {
+                    root.cursor-x = x;
+                    root.cursor-y = y;
                 }
                 
-                // Floating 3D panel (z-index: 1 - above canvas, positioned top-right)
-                if show-3d-panel && !panel-3d-maximized: Floating3DPanel {
-                    width: 320px;
-                    height: 240px;
-                    x: parent.width - 320px - 16px;
-                    y: 16px;
-                    maximized: false;
-                    
-                    maximize-clicked => {
-                        root.panel-3d-maximized = true;
-                    }
-                    
-                    close-clicked => {
-                        root.show-3d-panel = false;
-                    }
+                zoom-changed(z) => {
+                    root.zoom = clamp(z, 0.1, 10.0);
                 }
             }
             
-            // Right separator line
-            Rectangle {
-                width: 1px;
-                background: Theme.border-subtle;
-            }
-            
-            // Right sidebar
-            RightSidebar {
-                collapsed: root.right-sidebar-collapsed;
+            // Floating 3D panel (z-index: 1 - above canvas, positioned top-right)
+            if show-3d-panel && !panel-3d-maximized: Floating3DPanel {
+                width: 320px;
+                height: 240px;
+                x: parent.width - 320px - 16px;
+                y: 16px;
+                maximized: false;
+                
+                maximize-clicked => {
+                    root.panel-3d-maximized = true;
+                }
+                
+                close-clicked => {
+                    root.show-3d-panel = false;
+                }
             }
         }
         
-        // Bottom bar
-        BottomBar {
-            cursor-x: root.cursor-x;
-            cursor-y: root.cursor-y;
-            selection-count: root.selection-count;
-            fps: root.fps;
-            memory-mb: root.memory-mb;
+        // Right separator line
+        Rectangle {
+            width: 1px;
+            background: Theme.border-subtle;
         }
+        
+        // Right sidebar
+        RightSidebar {
+            collapsed: root.right-sidebar-collapsed;
+        }
+    }
+    
+    // Bottom bar - fixed at bottom
+    BottomBar {
+        x: 0px;
+        y: root.height - Theme.bottombar-height;
+        width: 100%;
+        cursor-x: root.cursor-x;
+        cursor-y: root.cursor-y;
+        selection-count: root.selection-count;
+        fps: root.fps;
+        memory-mb: root.memory-mb;
     }
     
     // Maximized 3D panel overlay (z-index: 2 - above everything except dropdowns)
