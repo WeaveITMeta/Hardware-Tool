@@ -44,7 +44,9 @@ export component MenuDropdown inherits Rectangle {
     in property <[MenuItem]> items;
     callback item-clicked(int);
     
-    width: 220px;
+    // Dynamic width based on content
+    width: max(160px, min(280px, menu-content.preferred-width + 8px));
+    height: menu-content.preferred-height + 8px;
     background: Theme.bg-elevated;
     border-radius: Theme.radius-md;
     border-width: 1px;
@@ -53,7 +55,7 @@ export component MenuDropdown inherits Rectangle {
     drop-shadow-color: #00000060;
     drop-shadow-offset-y: 4px;
     
-    VerticalLayout {
+    menu-content := VerticalLayout {
         padding: 4px;
         spacing: 0px;
         
@@ -73,6 +75,7 @@ export component MenuDropdown inherits Rectangle {
                 HorizontalLayout {
                     padding-left: Theme.spacing-md;
                     padding-right: Theme.spacing-md;
+                    spacing: Theme.spacing-lg;
                     
                     Text {
                         text: item.label;
@@ -81,13 +84,16 @@ export component MenuDropdown inherits Rectangle {
                         vertical-alignment: center;
                     }
                     
-                    Rectangle { }
+                    Rectangle { 
+                        min-width: 8px;
+                    }
                     
                     Text {
                         text: item.shortcut;
                         color: Theme.text-tertiary;
                         font-size: 11px;
                         vertical-alignment: center;
+                        horizontal-alignment: right;
                     }
                 }
                 
@@ -360,202 +366,207 @@ export component TitleBar inherits Rectangle {
     callback view-action(int);
     callback help-action(int);
     
-    height: Theme.titlebar-height;
+    height: 72px;  // Two rows: 24px menu bar + 40px toolbar
     background: Theme.bg-secondary;
     border-width: 0px;
     border-color: Theme.border-subtle;
     
-    HorizontalLayout {
-        padding: Theme.spacing-sm;
-        spacing: Theme.spacing-sm;
+    VerticalLayout {
+        spacing: 0px;
         
-        // Logo
-        Text {
-            text: "⚙";
-            font-size: 20px;
-            color: Theme.primary;
-            vertical-alignment: center;
-        }
-        
-        // System menu bar
-        HorizontalLayout {
-            spacing: 0px;
-            
-            MenuButton {
-                label: "File";
-                menu-open: root.active-menu == 1;
-                clicked => { root.active-menu = root.active-menu == 1 ? 0 : 1; }
-            }
-            
-            MenuButton {
-                label: "Edit";
-                menu-open: root.active-menu == 2;
-                clicked => { root.active-menu = root.active-menu == 2 ? 0 : 2; }
-            }
-            
-            MenuButton {
-                label: "Selection";
-                menu-open: root.active-menu == 3;
-                clicked => { root.active-menu = root.active-menu == 3 ? 0 : 3; }
-            }
-            
-            MenuButton {
-                label: "View";
-                menu-open: root.active-menu == 4;
-                clicked => { root.active-menu = root.active-menu == 4 ? 0 : 4; }
-            }
-            
-            MenuButton {
-                label: "Help";
-                menu-open: root.active-menu == 5;
-                clicked => { root.active-menu = root.active-menu == 5 ? 0 : 5; }
-            }
-        }
-        
-        // Separator
+        // Row 1: System menu bar
         Rectangle {
-            width: 1px;
-            background: Theme.border-subtle;
-        }
-        
-        // Project name
-        Text {
-            text: project-name + (unsaved ? " •" : "");
-            color: Theme.text-secondary;
-            font-size: 13px;
-            vertical-alignment: center;
-            overflow: elide;
-            max-width: 150px;
-        }
-        
-        // Separator
-        Rectangle {
-            width: 1px;
-            background: Theme.border-subtle;
-        }
-        
-        // Domain selector button
-        domain-selector := DomainSelector {
-            current-domain: root.current-domain;
-            dropdown-open <=> root.domain-dropdown-open;
-            domain-changed(d) => { root.domain-changed(d); }
-        }
-        
-        // Separator
-        Rectangle {
-            width: 1px;
-            background: Theme.border-subtle;
-        }
-        
-        // View tabs
-        HorizontalLayout {
-            spacing: Theme.spacing-xs;
-            
-            ViewTab {
-                icon: "📐";
-                label: "Schematic";
-                tooltip: "Schematic Editor";
-                shortcut: "F1";
-                active: current-view == 0;
-                clicked => { root.view-changed(0); }
-            }
-            
-            ViewTab {
-                icon: "🔲";
-                label: "Layout";
-                tooltip: "PCB Layout Editor";
-                shortcut: "F2";
-                active: current-view == 1;
-                clicked => { root.view-changed(1); }
-            }
-            
-            ViewTab {
-                icon: "🎲";
-                label: "3D";
-                tooltip: "3D Viewer";
-                shortcut: "F3";
-                active: current-view == 2;
-                clicked => { root.view-changed(2); }
-            }
-            
-            ViewTab {
-                icon: "💻";
-                label: "Code";
-                tooltip: "Programmatic Design";
-                shortcut: "F4";
-                active: current-view == 3;
-                clicked => { root.view-changed(3); }
-            }
-        }
-        
-        // Spacer
-        Rectangle { }
-        
-        // Search button
-        Rectangle {
-            width: 200px;
-            height: 32px;
-            background: Theme.bg-tertiary;
-            border-radius: Theme.radius-md;
+            height: 28px;
+            background: Theme.bg-primary;
             
             HorizontalLayout {
-                padding-left: Theme.spacing-md;
-                padding-right: Theme.spacing-md;
+                padding-left: Theme.spacing-sm;
+                padding-right: Theme.spacing-sm;
+                spacing: 0px;
                 
-                Text {
-                    text: "🔍 Search...";
-                    color: Theme.text-tertiary;
-                    font-size: 13px;
-                    vertical-alignment: center;
+                // System menu bar
+                HorizontalLayout {
+                    spacing: 0px;
+                    
+                    MenuButton {
+                        label: "File";
+                        menu-open: root.active-menu == 1;
+                        clicked => { root.active-menu = root.active-menu == 1 ? 0 : 1; }
+                    }
+                    
+                    MenuButton {
+                        label: "Edit";
+                        menu-open: root.active-menu == 2;
+                        clicked => { root.active-menu = root.active-menu == 2 ? 0 : 2; }
+                    }
+                    
+                    MenuButton {
+                        label: "Selection";
+                        menu-open: root.active-menu == 3;
+                        clicked => { root.active-menu = root.active-menu == 3 ? 0 : 3; }
+                    }
+                    
+                    MenuButton {
+                        label: "View";
+                        menu-open: root.active-menu == 4;
+                        clicked => { root.active-menu = root.active-menu == 4 ? 0 : 4; }
+                    }
+                    
+                    MenuButton {
+                        label: "Help";
+                        menu-open: root.active-menu == 5;
+                        clicked => { root.active-menu = root.active-menu == 5 ? 0 : 5; }
+                    }
                 }
                 
+                // Spacer
                 Rectangle { }
                 
+                // Project name (right side of menu bar)
                 Text {
-                    text: "Ctrl+K";
-                    color: Theme.text-disabled;
-                    font-size: 11px;
+                    text: project-name + (unsaved ? " •" : "");
+                    color: Theme.text-tertiary;
+                    font-size: 12px;
                     vertical-alignment: center;
                 }
             }
-            
-            TouchArea {
-                clicked => { root.search-clicked(); }
-            }
         }
         
-        // Separator
+        // Row 2: Toolbar
         Rectangle {
-            width: 1px;
-            background: Theme.border-subtle;
-        }
-        
-        // Action buttons
-        HorizontalLayout {
-            spacing: Theme.spacing-xs;
+            height: 44px;
+            background: Theme.bg-secondary;
             
-            IconButton {
-                icon: "↩️";
-                tooltip: "Undo (Ctrl+Z)";
-                clicked => { root.undo-clicked(); }
-            }
-            
-            IconButton {
-                icon: "↪️";
-                tooltip: "Redo (Ctrl+Y)";
-                clicked => { root.redo-clicked(); }
-            }
-            
-            IconButton {
-                icon: "💾";
-                tooltip: "Save (Ctrl+S)";
-                clicked => { root.save-clicked(); }
-            }
-            
-            IconButton {
-                icon: "☰";
-                tooltip: "Menu";
-                clicked => { root.menu-clicked(); }
+            HorizontalLayout {
+                padding: Theme.spacing-sm;
+                spacing: Theme.spacing-sm;
+                
+                // Logo
+                Text {
+                    text: "⚙";
+                    font-size: 20px;
+                    color: Theme.primary;
+                    vertical-alignment: center;
+                }
+                
+                // Domain selector button
+                domain-selector := DomainSelector {
+                    current-domain: root.current-domain;
+                    dropdown-open <=> root.domain-dropdown-open;
+                    domain-changed(d) => { root.domain-changed(d); }
+                }
+                
+                // Separator
+                Rectangle {
+                    width: 1px;
+                    background: Theme.border-subtle;
+                }
+                
+                // View tabs
+                HorizontalLayout {
+                    spacing: Theme.spacing-xs;
+                    
+                    ViewTab {
+                        icon: "📐";
+                        label: "Schematic";
+                        tooltip: "Schematic Editor";
+                        shortcut: "F1";
+                        active: current-view == 0;
+                        clicked => { root.view-changed(0); }
+                    }
+                    
+                    ViewTab {
+                        icon: "🔲";
+                        label: "Layout";
+                        tooltip: "PCB Layout Editor";
+                        shortcut: "F2";
+                        active: current-view == 1;
+                        clicked => { root.view-changed(1); }
+                    }
+                    
+                    ViewTab {
+                        icon: "🎲";
+                        label: "3D";
+                        tooltip: "3D Viewer";
+                        shortcut: "F3";
+                        active: current-view == 2;
+                        clicked => { root.view-changed(2); }
+                    }
+                    
+                    ViewTab {
+                        icon: "💻";
+                        label: "Code";
+                        tooltip: "Programmatic Design";
+                        shortcut: "F4";
+                        active: current-view == 3;
+                        clicked => { root.view-changed(3); }
+                    }
+                }
+                
+                // Spacer
+                Rectangle { }
+                
+                // Search button
+                Rectangle {
+                    width: 200px;
+                    height: 32px;
+                    background: Theme.bg-tertiary;
+                    border-radius: Theme.radius-md;
+                    
+                    HorizontalLayout {
+                        padding-left: Theme.spacing-md;
+                        padding-right: Theme.spacing-md;
+                        
+                        Text {
+                            text: "🔍 Search...";
+                            color: Theme.text-tertiary;
+                            font-size: 13px;
+                            vertical-alignment: center;
+                        }
+                        
+                        Rectangle { }
+                        
+                        Text {
+                            text: "Ctrl+K";
+                            color: Theme.text-disabled;
+                            font-size: 11px;
+                            vertical-alignment: center;
+                        }
+                    }
+                    
+                    TouchArea {
+                        clicked => { root.search-clicked(); }
+                    }
+                }
+                
+                // Separator
+                Rectangle {
+                    width: 1px;
+                    background: Theme.border-subtle;
+                }
+                
+                // Action buttons
+                HorizontalLayout {
+                    spacing: Theme.spacing-xs;
+                    
+                    IconButton {
+                        icon: "↩️";
+                        tooltip: "Undo (Ctrl+Z)";
+                        clicked => { root.undo-clicked(); }
+                    }
+                    
+                    IconButton {
+                        icon: "↪️";
+                        tooltip: "Redo (Ctrl+Y)";
+                        clicked => { root.redo-clicked(); }
+                    }
+                    
+                    IconButton {
+                        icon: "💾";
+                        tooltip: "Save (Ctrl+S)";
+                        clicked => { root.save-clicked(); }
+                    }
+                }
             }
         }
     }

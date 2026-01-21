@@ -275,8 +275,8 @@ export component MainWindow inherits Window {
         
         // File menu
         if active-menu == 1: MenuDropdown {
-            x: 28px + Theme.spacing-sm;
-            y: Theme.titlebar-height - 4px;
+            x: Theme.spacing-sm;
+            y: Theme.menubar-height;
             title: "File";
             items: root.file-menu-items;
             
@@ -287,8 +287,8 @@ export component MainWindow inherits Window {
         
         // Edit menu
         if active-menu == 2: MenuDropdown {
-            x: 28px + 36px + Theme.spacing-sm;
-            y: Theme.titlebar-height - 4px;
+            x: Theme.spacing-sm + 36px;
+            y: Theme.menubar-height;
             title: "Edit";
             items: root.edit-menu-items;
             
@@ -299,8 +299,8 @@ export component MainWindow inherits Window {
         
         // Selection menu
         if active-menu == 3: MenuDropdown {
-            x: 28px + 72px + Theme.spacing-sm;
-            y: Theme.titlebar-height - 4px;
+            x: Theme.spacing-sm + 72px;
+            y: Theme.menubar-height;
             title: "Selection";
             items: root.selection-menu-items;
             
@@ -311,8 +311,8 @@ export component MainWindow inherits Window {
         
         // View menu
         if active-menu == 4: MenuDropdown {
-            x: 28px + 132px + Theme.spacing-sm;
-            y: Theme.titlebar-height - 4px;
+            x: Theme.spacing-sm + 140px;
+            y: Theme.menubar-height;
             title: "View";
             items: root.view-menu-items;
             
@@ -323,8 +323,8 @@ export component MainWindow inherits Window {
         
         // Help menu
         if active-menu == 5: MenuDropdown {
-            x: 28px + 176px + Theme.spacing-sm;
-            y: Theme.titlebar-height - 4px;
+            x: Theme.spacing-sm + 184px;
+            y: Theme.menubar-height;
             title: "Help";
             items: root.help-menu-items;
             
