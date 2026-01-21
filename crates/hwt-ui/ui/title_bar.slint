@@ -272,6 +272,8 @@ export component ViewTab inherits Rectangle {
         running: ta.has-hover && (root.tooltip != "" || root.shortcut != "");
         triggered => {
             if ta.has-hover {
+                Theme.tooltip-x = ta.mouse-x + root.absolute-position.x + 16px;
+                Theme.tooltip-y = ta.mouse-y + root.absolute-position.y + 16px;
                 Theme.tooltip-text = root.tooltip != "" ? 
                     (root.shortcut != "" ? root.tooltip + " (" + root.shortcut + ")" : root.tooltip) :
                     root.label + " (" + root.shortcut + ")";
@@ -325,6 +327,8 @@ export component IconButton inherits Rectangle {
         running: ta.has-hover && root.tooltip != "";
         triggered => {
             if ta.has-hover {
+                Theme.tooltip-x = ta.mouse-x + root.absolute-position.x + 16px;
+                Theme.tooltip-y = ta.mouse-y + root.absolute-position.y + 16px;
                 Theme.tooltip-text = root.tooltip;
                 Theme.tooltip-visible = true;
             }

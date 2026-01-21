@@ -109,6 +109,36 @@ component ToolButton inherits Rectangle {
     
     ta := TouchArea {
         clicked => { root.clicked(); }
+        
+        moved => {
+            if self.has-hover && root.tooltip != "" {
+                Theme.tooltip-x = self.mouse-x + root.absolute-position.x + 16px;
+                Theme.tooltip-y = self.mouse-y + root.absolute-position.y + 16px;
+            }
+        }
+    }
+    
+    // Timer for delayed tooltip
+    Timer {
+        interval: 500ms;
+        running: ta.has-hover && root.tooltip != "";
+        triggered => {
+            if ta.has-hover {
+                Theme.tooltip-x = ta.mouse-x + root.absolute-position.x + 16px;
+                Theme.tooltip-y = ta.mouse-y + root.absolute-position.y + 16px;
+                Theme.tooltip-text = root.tooltip;
+                Theme.tooltip-visible = true;
+            }
+        }
+    }
+    
+    // Hide tooltip when not hovering
+    if !ta.has-hover: Rectangle {
+        width: 0px;
+        height: 0px;
+        init => {
+            Theme.tooltip-visible = false;
+        }
     }
 }
 
