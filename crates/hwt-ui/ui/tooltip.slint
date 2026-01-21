@@ -21,9 +21,9 @@ export component TooltipArea inherits Rectangle {
         
         moved => {
             if self.has-hover && tooltip-text != "" {
-                // Update tooltip position (offset from cursor)
-                Theme.tooltip-x = self.mouse-x + root.absolute-position.x + 12px;
-                Theme.tooltip-y = self.mouse-y + root.absolute-position.y + 20px;
+                // Update tooltip position (16px right and 16px down from cursor)
+                Theme.tooltip-x = self.mouse-x + root.absolute-position.x + 16px;
+                Theme.tooltip-y = self.mouse-y + root.absolute-position.y + 16px;
             }
         }
     }
