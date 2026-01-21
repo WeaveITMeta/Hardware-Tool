@@ -1,0 +1,79 @@
+// Hardware Tool Theme
+// Visual style guidelines implementation
+
+export global Theme {
+    // Current domain (0=PCB, 1=IC, 2=Quantum, 3=MEMS, 4=RF, 5=Packaging)
+    in-out property <int> current-domain: 0;
+    
+    // Dynamic accent color based on domain
+    out property <color> accent: current-domain == 0 ? domain-pcb :
+                                 current-domain == 1 ? domain-ic :
+                                 current-domain == 2 ? domain-quantum :
+                                 current-domain == 3 ? domain-mems :
+                                 current-domain == 4 ? domain-rf :
+                                 domain-packaging;
+    
+    // Primary palette (uses accent for domain-aware theming)
+    out property <color> primary: accent;
+    out property <color> primary-hover: accent.brighter(20%);
+    out property <color> primary-pressed: accent.darker(20%);
+    
+    // Feedback colors
+    out property <color> success: #00FF9D;
+    out property <color> warning: #FFB800;
+    out property <color> error: #FF3366;
+    out property <color> info: #6C7A89;
+    
+    // Dark theme backgrounds
+    out property <color> bg-primary: #0D0D0D;
+    out property <color> bg-secondary: #1A1A1A;
+    out property <color> bg-tertiary: #262626;
+    out property <color> bg-elevated: #333333;
+    
+    // Text colors
+    out property <color> text-primary: #FFFFFF;
+    out property <color> text-secondary: #B3B3B3;
+    out property <color> text-tertiary: #666666;
+    out property <color> text-disabled: #404040;
+    
+    // Border colors
+    out property <color> border-subtle: #333333;
+    out property <color> border-default: #404040;
+    out property <color> border-strong: #666666;
+    
+    // Domain accent colors
+    out property <color> domain-pcb: #B87333;
+    out property <color> domain-ic: #3498DB;
+    out property <color> domain-quantum: #9B59B6;
+    out property <color> domain-mems: #1ABC9C;
+    out property <color> domain-rf: #E67E22;
+    out property <color> domain-packaging: #7F8C8D;
+    
+    // PCB-specific colors
+    out property <color> copper: #B87333;
+    out property <color> soldermask-green: #006847;
+    out property <color> silkscreen: #FFFFFF;
+    out property <color> ratsnest: #FFFF00;
+    
+    // Spacing
+    out property <length> spacing-xs: 4px;
+    out property <length> spacing-sm: 8px;
+    out property <length> spacing-md: 12px;
+    out property <length> spacing-lg: 16px;
+    out property <length> spacing-xl: 24px;
+    
+    // Border radius
+    out property <length> radius-sm: 4px;
+    out property <length> radius-md: 6px;
+    out property <length> radius-lg: 8px;
+    
+    // Sidebar widths
+    out property <length> sidebar-width: 280px;
+    out property <length> sidebar-collapsed: 48px;
+    
+    // Title bar height
+    out property <length> titlebar-height: 48px;
+    
+    // Bottom bar height
+    out property <length> bottombar-height: 28px;
+}

@@ -1,0 +1,351 @@
+// Title Bar Component
+// Contains: Mode switcher, view tabs, search, undo/redo, save, menu
+
+import { Theme } from "theme.slint";
+
+export component DomainSelector inherits Rectangle {
+    in property <int> current-domain: 0;
+    in property <[string]> domain-names: ["PCB", "IC", "Quantum", "MEMS", "RF", "Packaging"];
+    in property <[string]> domain-icons: ["🔲", "🔷", "⚛️", "📡", "📶", "📦"];
+    in property <[color]> domain-colors: [#B87333, #3498DB, #9B59B6, #1ABC9C, #E67E22, #7F8C8D];
+    in-out property <bool> dropdown-open: false;
+    callback domain-changed(int);
+    
+    width: 120px;
+    height: 32px;
+    background: Theme.bg-tertiary;
+    border-radius: Theme.radius-md;
+    border-width: dropdown-open ? 1px : 0px;
+    border-color: domain-colors[current-domain];
+    
+    HorizontalLayout {
+        padding: Theme.spacing-sm;
+        spacing: Theme.spacing-xs;
+        
+        Text {
+            text: domain-icons[current-domain];
+            font-size: 14px;
+            vertical-alignment: center;
+        }
+        
+        Text {
+            text: domain-names[current-domain];
+            color: Theme.text-primary;
+            font-size: 13px;
+            font-weight: 500;
+            vertical-alignment: center;
+        }
+        
+        Text {
+            text: dropdown-open ? "▲" : "▼";
+            color: Theme.text-secondary;
+            font-size: 10px;
+            vertical-alignment: center;
+        }
+    }
+    
+    TouchArea {
+        clicked => {
+            dropdown-open = !dropdown-open;
+        }
+    }
+    
+    // Dropdown menu
+    if dropdown-open: Rectangle {
+        x: 0px;
+        y: parent.height + 4px;
+        width: 160px;
+        height: 6 * 36px + 8px;
+        background: Theme.bg-elevated;
+        border-radius: Theme.radius-md;
+        border-width: 1px;
+        border-color: Theme.border-default;
+        drop-shadow-blur: 12px;
+        drop-shadow-color: #00000060;
+        drop-shadow-offset-y: 4px;
+        
+        VerticalLayout {
+            padding: 4px;
+            spacing: 0px;
+            
+            for domain[idx] in domain-names: Rectangle {
+                height: 36px;
+                background: idx == current-domain ? domain-colors[idx].with-alpha(0.2) : 
+                            item-ta.has-hover ? Theme.bg-tertiary : transparent;
+                border-radius: Theme.radius-sm;
+                
+                HorizontalLayout {
+                    padding-left: Theme.spacing-md;
+                    padding-right: Theme.spacing-md;
+                    spacing: Theme.spacing-sm;
+                    
+                    Text {
+                        text: domain-icons[idx];
+                        font-size: 16px;
+                        vertical-alignment: center;
+                    }
+                    
+                    Text {
+                        text: domain;
+                        color: idx == current-domain ? domain-colors[idx] : Theme.text-primary;
+                        font-size: 13px;
+                        font-weight: idx == current-domain ? 600 : 400;
+                        vertical-alignment: center;
+                    }
+                    
+                    Rectangle { }
+                    
+                    if idx == current-domain: Text {
+                        text: "✓";
+                        color: domain-colors[idx];
+                        font-size: 14px;
+                        vertical-alignment: center;
+                    }
+                }
+                
+                item-ta := TouchArea {
+                    clicked => {
+                        root.domain-changed(idx);
+                        root.dropdown-open = false;
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component ViewTab inherits Rectangle {
+    in property <string> label;
+    in property <string> icon;
+    in property <bool> active: false;
+    callback clicked;
+    
+    width: self.preferred-width;
+    height: 32px;
+    background: active ? Theme.bg-tertiary : transparent;
+    border-radius: Theme.radius-md;
+    
+    HorizontalLayout {
+        padding-left: Theme.spacing-md;
+        padding-right: Theme.spacing-md;
+        spacing: Theme.spacing-xs;
+        
+        Text {
+            text: icon;
+            font-size: 14px;
+            vertical-alignment: center;
+        }
+        
+        Text {
+            text: label;
+            color: active ? Theme.text-primary : Theme.text-secondary;
+            font-size: 13px;
+            font-weight: active ? 500 : 400;
+            vertical-alignment: center;
+        }
+    }
+    
+    TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+export component IconButton inherits Rectangle {
+    in property <string> icon;
+    in property <string> tooltip;
+    in property <bool> enabled: true;
+    callback clicked;
+    
+    width: 32px;
+    height: 32px;
+    background: ta.has-hover ? Theme.bg-tertiary : transparent;
+    border-radius: Theme.radius-md;
+    opacity: enabled ? 1.0 : 0.5;
+    
+    Text {
+        text: icon;
+        font-size: 16px;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    
+    ta := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component TitleBar inherits Rectangle {
+    in property <string> project-name: "Untitled";
+    in property <bool> unsaved: false;
+    in property <int> current-domain: 0;
+    in property <int> current-view: 0;
+    
+    callback domain-changed(int);
+    callback view-changed(int);
+    callback search-clicked;
+    callback undo-clicked;
+    callback redo-clicked;
+    callback save-clicked;
+    callback menu-clicked;
+    
+    height: Theme.titlebar-height;
+    background: Theme.bg-secondary;
+    border-width: 0px;
+    border-color: Theme.border-subtle;
+    
+    HorizontalLayout {
+        padding: Theme.spacing-sm;
+        spacing: Theme.spacing-md;
+        
+        // Logo and project name
+        HorizontalLayout {
+            spacing: Theme.spacing-sm;
+            width: 200px;
+            
+            Text {
+                text: "⚙";
+                font-size: 20px;
+                color: Theme.primary;
+                vertical-alignment: center;
+            }
+            
+            Text {
+                text: project-name + (unsaved ? " •" : "");
+                color: Theme.text-primary;
+                font-size: 14px;
+                font-weight: 500;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+        }
+        
+        // Domain selector
+        DomainSelector {
+            current-domain: root.current-domain;
+            domain-changed(d) => { root.domain-changed(d); }
+        }
+        
+        // Separator
+        Rectangle {
+            width: 1px;
+            background: Theme.border-subtle;
+        }
+        
+        // View tabs
+        HorizontalLayout {
+            spacing: Theme.spacing-xs;
+            
+            ViewTab {
+                icon: "📐";
+                label: "Schematic";
+                active: current-view == 0;
+                clicked => { root.view-changed(0); }
+            }
+            
+            ViewTab {
+                icon: "🔲";
+                label: "Layout";
+                active: current-view == 1;
+                clicked => { root.view-changed(1); }
+            }
+            
+            ViewTab {
+                icon: "🎲";
+                label: "3D";
+                active: current-view == 2;
+                clicked => { root.view-changed(2); }
+            }
+            
+            ViewTab {
+                icon: "💻";
+                label: "Code";
+                active: current-view == 3;
+                clicked => { root.view-changed(3); }
+            }
+        }
+        
+        // Spacer
+        Rectangle { }
+        
+        // Search button
+        Rectangle {
+            width: 200px;
+            height: 32px;
+            background: Theme.bg-tertiary;
+            border-radius: Theme.radius-md;
+            
+            HorizontalLayout {
+                padding-left: Theme.spacing-md;
+                padding-right: Theme.spacing-md;
+                
+                Text {
+                    text: "🔍 Search...";
+                    color: Theme.text-tertiary;
+                    font-size: 13px;
+                    vertical-alignment: center;
+                }
+                
+                Rectangle { }
+                
+                Text {
+                    text: "Ctrl+K";
+                    color: Theme.text-disabled;
+                    font-size: 11px;
+                    vertical-alignment: center;
+                }
+            }
+            
+            TouchArea {
+                clicked => { root.search-clicked(); }
+            }
+        }
+        
+        // Separator
+        Rectangle {
+            width: 1px;
+            background: Theme.border-subtle;
+        }
+        
+        // Action buttons
+        HorizontalLayout {
+            spacing: Theme.spacing-xs;
+            
+            IconButton {
+                icon: "↩️";
+                tooltip: "Undo (Ctrl+Z)";
+                clicked => { root.undo-clicked(); }
+            }
+            
+            IconButton {
+                icon: "↪️";
+                tooltip: "Redo (Ctrl+Y)";
+                clicked => { root.redo-clicked(); }
+            }
+            
+            IconButton {
+                icon: "💾";
+                tooltip: "Save (Ctrl+S)";
+                clicked => { root.save-clicked(); }
+            }
+            
+            IconButton {
+                icon: "☰";
+                tooltip: "Menu";
+                clicked => { root.menu-clicked(); }
+            }
+        }
+    }
+    
+    // Bottom border accent (domain color)
+    Rectangle {
+        y: parent.height - 2px;
+        height: 2px;
+        background: current-domain == 0 ? Theme.domain-pcb :
+                    current-domain == 1 ? Theme.domain-ic :
+                    current-domain == 2 ? Theme.domain-quantum :
+                    current-domain == 3 ? Theme.domain-mems :
+                    current-domain == 4 ? Theme.domain-rf :
+                    Theme.domain-packaging;
+    }
+}

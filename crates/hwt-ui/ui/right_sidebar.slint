@@ -1,0 +1,343 @@
+// Right Sidebar Component
+// Contains: Properties inspector, DRC results, sync status
+
+import { Theme } from "theme.slint";
+
+export component PropertyRow inherits Rectangle {
+    in property <string> label;
+    in property <string> value;
+    in property <bool> editable: true;
+    callback value-changed(string);
+    
+    height: 28px;
+    background: transparent;
+    
+    HorizontalLayout {
+        padding-left: Theme.spacing-md;
+        padding-right: Theme.spacing-md;
+        
+        Text {
+            text: label;
+            color: Theme.text-secondary;
+            font-size: 12px;
+            vertical-alignment: center;
+            width: 80px;
+        }
+        
+        if editable: Rectangle {
+            background: Theme.bg-tertiary;
+            border-radius: Theme.radius-sm;
+            
+            TextInput {
+                text: value;
+                font-size: 12px;
+                color: Theme.text-primary;
+                vertical-alignment: center;
+                horizontal-alignment: left;
+                
+                edited => { root.value-changed(self.text); }
+            }
+        }
+        
+        if !editable: Text {
+            text: value;
+            color: Theme.text-primary;
+            font-size: 12px;
+            vertical-alignment: center;
+        }
+    }
+}
+
+export component DrcItem inherits Rectangle {
+    in property <string> severity: "error";
+    in property <string> message;
+    in property <string> location;
+    callback clicked;
+    
+    height: 48px;
+    background: ta.has-hover ? Theme.bg-tertiary : transparent;
+    
+    HorizontalLayout {
+        padding: Theme.spacing-sm;
+        spacing: Theme.spacing-sm;
+        
+        // Severity icon
+        Rectangle {
+            width: 24px;
+            height: 24px;
+            background: severity == "error" ? Theme.error.with-alpha(0.2) :
+                        severity == "warning" ? Theme.warning.with-alpha(0.2) :
+                        Theme.info.with-alpha(0.2);
+            border-radius: Theme.radius-sm;
+            
+            Text {
+                text: severity == "error" ? "✗" :
+                      severity == "warning" ? "⚠" : "ℹ";
+                color: severity == "error" ? Theme.error :
+                       severity == "warning" ? Theme.warning :
+                       Theme.info;
+                font-size: 14px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+        
+        VerticalLayout {
+            spacing: 2px;
+            
+            Text {
+                text: message;
+                color: Theme.text-primary;
+                font-size: 12px;
+                overflow: elide;
+            }
+            
+            Text {
+                text: location;
+                color: Theme.text-tertiary;
+                font-size: 11px;
+                overflow: elide;
+            }
+        }
+    }
+    
+    ta := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+export component RightSidebar inherits Rectangle {
+    in property <bool> collapsed: false;
+    in property <string> selected-ref: "U1";
+    in property <string> selected-value: "STM32F405";
+    in property <string> selected-footprint: "LQFP-64";
+    in property <int> error-count: 3;
+    in property <int> warning-count: 5;
+    in property <bool> synced: true;
+    
+    callback property-changed(string, string);
+    callback drc-item-clicked(int);
+    
+    width: collapsed ? Theme.sidebar-collapsed : Theme.sidebar-width;
+    background: Theme.bg-secondary;
+    
+    if !collapsed: VerticalLayout {
+        padding: Theme.spacing-sm;
+        spacing: Theme.spacing-md;
+        
+        // Properties section
+        Rectangle {
+            background: Theme.bg-tertiary;
+            border-radius: Theme.radius-md;
+            
+            VerticalLayout {
+                padding: Theme.spacing-sm;
+                spacing: Theme.spacing-xs;
+                
+                // Header
+                HorizontalLayout {
+                    padding-bottom: Theme.spacing-sm;
+                    
+                    Text {
+                        text: "Properties";
+                        color: Theme.text-primary;
+                        font-size: 13px;
+                        font-weight: 500;
+                    }
+                    
+                    Rectangle { }
+                    
+                    Text {
+                        text: "📌";
+                        font-size: 14px;
+                    }
+                }
+                
+                // Component info
+                Text {
+                    text: "Component: " + selected-ref;
+                    color: Theme.text-secondary;
+                    font-size: 12px;
+                }
+                
+                Rectangle {
+                    height: 1px;
+                    background: Theme.border-subtle;
+                }
+                
+                PropertyRow {
+                    label: "Reference";
+                    value: selected-ref;
+                    value-changed(v) => { root.property-changed("reference", v); }
+                }
+                
+                PropertyRow {
+                    label: "Value";
+                    value: selected-value;
+                    value-changed(v) => { root.property-changed("value", v); }
+                }
+                
+                PropertyRow {
+                    label: "Footprint";
+                    value: selected-footprint;
+                    value-changed(v) => { root.property-changed("footprint", v); }
+                }
+            }
+        }
+        
+        // DRC Results section
+        Rectangle {
+            background: Theme.bg-tertiary;
+            border-radius: Theme.radius-md;
+            
+            VerticalLayout {
+                padding: Theme.spacing-sm;
+                spacing: Theme.spacing-xs;
+                
+                // Header
+                HorizontalLayout {
+                    Text {
+                        text: "Design Checks";
+                        color: Theme.text-primary;
+                        font-size: 13px;
+                        font-weight: 500;
+                    }
+                    
+                    Rectangle { }
+                    
+                    Text {
+                        text: "🔄";
+                        font-size: 14px;
+                    }
+                }
+                
+                // Summary
+                HorizontalLayout {
+                    spacing: Theme.spacing-md;
+                    
+                    HorizontalLayout {
+                        spacing: Theme.spacing-xs;
+                        
+                        Rectangle {
+                            width: 8px;
+                            height: 8px;
+                            background: Theme.error;
+                            border-radius: 4px;
+                        }
+                        
+                        Text {
+                            text: error-count + " Errors";
+                            color: Theme.error;
+                            font-size: 12px;
+                            vertical-alignment: center;
+                        }
+                    }
+                    
+                    HorizontalLayout {
+                        spacing: Theme.spacing-xs;
+                        
+                        Rectangle {
+                            width: 8px;
+                            height: 8px;
+                            background: Theme.warning;
+                            border-radius: 4px;
+                        }
+                        
+                        Text {
+                            text: warning-count + " Warnings";
+                            color: Theme.warning;
+                            font-size: 12px;
+                            vertical-alignment: center;
+                        }
+                    }
+                }
+                
+                Rectangle {
+                    height: 1px;
+                    background: Theme.border-subtle;
+                }
+                
+                // DRC items
+                DrcItem {
+                    severity: "error";
+                    message: "Clearance violation";
+                    location: "U1.pad1 - R1.pad2";
+                    clicked => { root.drc-item-clicked(0); }
+                }
+                
+                DrcItem {
+                    severity: "warning";
+                    message: "Unconnected pin";
+                    location: "U1.NC";
+                    clicked => { root.drc-item-clicked(1); }
+                }
+            }
+        }
+        
+        // Sync status
+        Rectangle {
+            height: 40px;
+            background: Theme.bg-tertiary;
+            border-radius: Theme.radius-md;
+            
+            HorizontalLayout {
+                padding: Theme.spacing-md;
+                spacing: Theme.spacing-sm;
+                
+                Rectangle {
+                    width: 8px;
+                    height: 8px;
+                    background: synced ? Theme.success : Theme.warning;
+                    border-radius: 4px;
+                    y: (parent.height - self.height) / 2;
+                }
+                
+                Text {
+                    text: synced ? "Synchronized" : "Syncing...";
+                    color: synced ? Theme.success : Theme.warning;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                }
+            }
+        }
+        
+        // Spacer
+        Rectangle { }
+    }
+    
+    // Collapsed state
+    if collapsed: VerticalLayout {
+        padding: Theme.spacing-sm;
+        spacing: Theme.spacing-md;
+        alignment: start;
+        
+        Rectangle {
+            width: 32px;
+            height: 32px;
+            background: Theme.bg-tertiary;
+            border-radius: Theme.radius-md;
+            
+            Text {
+                text: "⚙";
+                font-size: 16px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+        
+        Rectangle {
+            width: 32px;
+            height: 32px;
+            background: error-count > 0 ? Theme.error.with-alpha(0.2) : Theme.bg-tertiary;
+            border-radius: Theme.radius-md;
+            
+            Text {
+                text: error-count > 0 ? "✗" : "✓";
+                color: error-count > 0 ? Theme.error : Theme.success;
+                font-size: 16px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}

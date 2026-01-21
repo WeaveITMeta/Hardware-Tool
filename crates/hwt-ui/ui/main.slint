@@ -1,0 +1,151 @@
+// Hardware Tool Main Window
+// "One Hardware Tool That Does It All"
+
+import { Theme } from "theme.slint";
+import { TitleBar } from "title_bar.slint";
+import { LeftSidebar } from "left_sidebar.slint";
+import { RightSidebar } from "right_sidebar.slint";
+import { BottomBar } from "bottom_bar.slint";
+import { Canvas, Floating3DPanel } from "canvas.slint";
+
+export component MainWindow inherits Window {
+    title: "Hardware Tool";
+    icon: @image-url("");
+    min-width: 1024px;
+    min-height: 768px;
+    preferred-width: 1600px;
+    preferred-height: 900px;
+    background: Theme.bg-primary;
+    
+    // Application state
+    in-out property <string> project-name: "Untitled";
+    in-out property <bool> unsaved: false;
+    in-out property <int> current-domain: 0;
+    in-out property <int> current-view: 0;
+    in-out property <bool> left-sidebar-collapsed: false;
+    in-out property <bool> right-sidebar-collapsed: false;
+    in-out property <bool> show-3d-panel: true;
+    in-out property <bool> panel-3d-maximized: false;
+    
+    // Canvas state
+    in-out property <float> zoom: 1.0;
+    in-out property <float> cursor-x: 0.0;
+    in-out property <float> cursor-y: 0.0;
+    in-out property <int> selection-count: 0;
+    
+    // Performance
+    in-out property <int> fps: 60;
+    in-out property <int> memory-mb: 245;
+    
+    // Callbacks
+    callback domain-changed(int);
+    callback view-changed(int);
+    callback save-requested;
+    callback undo-requested;
+    callback redo-requested;
+    callback search-requested;
+    
+    VerticalLayout {
+        // Title bar
+        TitleBar {
+            project-name: root.project-name;
+            unsaved: root.unsaved;
+            current-domain: root.current-domain;
+            current-view: root.current-view;
+            
+            domain-changed(d) => { 
+                root.current-domain = d;
+                Theme.current-domain = d;
+                root.domain-changed(d); 
+            }
+            view-changed(v) => { 
+                root.current-view = v;
+                root.view-changed(v); 
+            }
+            search-clicked => { root.search-requested(); }
+            undo-clicked => { root.undo-requested(); }
+            redo-clicked => { root.redo-requested(); }
+            save-clicked => { root.save-requested(); }
+            menu-clicked => { }
+        }
+        
+        // Main content area
+        HorizontalLayout {
+            spacing: 0px;
+            
+            // Left sidebar
+            LeftSidebar {
+                collapsed: root.left-sidebar-collapsed;
+            }
+            
+            // Left separator line
+            Rectangle {
+                width: 1px;
+                background: Theme.border-subtle;
+            }
+            
+            // Canvas area with floating 3D panel
+            Rectangle {
+                Canvas {
+                    zoom: root.zoom;
+                    
+                    mouse-moved(x, y) => {
+                        root.cursor-x = x;
+                        root.cursor-y = y;
+                    }
+                    
+                    zoom-changed(z) => {
+                        root.zoom = clamp(z, 0.1, 10.0);
+                    }
+                }
+                
+                // Floating 3D panel
+                if show-3d-panel && !panel-3d-maximized: Floating3DPanel {
+                    maximized: false;
+                    
+                    maximize-clicked => {
+                        root.panel-3d-maximized = true;
+                    }
+                    
+                    close-clicked => {
+                        root.show-3d-panel = false;
+                    }
+                }
+            }
+            
+            // Right separator line
+            Rectangle {
+                width: 1px;
+                background: Theme.border-subtle;
+            }
+            
+            // Right sidebar
+            RightSidebar {
+                collapsed: root.right-sidebar-collapsed;
+            }
+        }
+        
+        // Bottom bar
+        BottomBar {
+            cursor-x: root.cursor-x;
+            cursor-y: root.cursor-y;
+            selection-count: root.selection-count;
+            fps: root.fps;
+            memory-mb: root.memory-mb;
+        }
+    }
+    
+    // Maximized 3D panel overlay
+    if panel-3d-maximized: Floating3DPanel {
+        maximized: true;
+        
+        maximize-clicked => {
+            root.panel-3d-maximized = false;
+        }
+        
+        close-clicked => {
+            root.panel-3d-maximized = false;
+            root.show-3d-panel = false;
+        }
+    }
+}

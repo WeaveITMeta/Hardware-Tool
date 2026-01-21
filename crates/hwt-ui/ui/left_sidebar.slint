@@ -1,0 +1,333 @@
+// Left Sidebar Component
+// Contains: Library browser, project tree, history
+
+import { Theme } from "theme.slint";
+
+export component SidebarSection inherits VerticalLayout {
+    in property <string> title;
+    in-out property <bool> collapsed: false;
+    
+    spacing: 0px;
+    
+    // Section header
+    Rectangle {
+        height: 32px;
+        background: ta.has-hover ? Theme.bg-tertiary : transparent;
+        
+        HorizontalLayout {
+            padding-left: Theme.spacing-md;
+            padding-right: Theme.spacing-md;
+            spacing: Theme.spacing-sm;
+            
+            Text {
+                text: collapsed ? "▶" : "▼";
+                color: Theme.text-secondary;
+                font-size: 10px;
+                vertical-alignment: center;
+                width: 12px;
+            }
+            
+            Text {
+                text: title;
+                color: Theme.text-secondary;
+                font-size: 11px;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                vertical-alignment: center;
+            }
+        }
+        
+        ta := TouchArea {
+            clicked => { collapsed = !collapsed; }
+        }
+    }
+}
+
+export component LibraryItem inherits Rectangle {
+    in property <string> icon: "📁";
+    in property <string> name;
+    in property <bool> selected: false;
+    callback clicked;
+    
+    height: 28px;
+    background: selected ? Theme.primary.with-alpha(0.2) : 
+                ta.has-hover ? Theme.bg-tertiary : transparent;
+    
+    HorizontalLayout {
+        padding-left: Theme.spacing-lg;
+        padding-right: Theme.spacing-md;
+        spacing: Theme.spacing-sm;
+        
+        Text {
+            text: icon;
+            font-size: 14px;
+            vertical-alignment: center;
+        }
+        
+        Text {
+            text: name;
+            color: selected ? Theme.primary : Theme.text-primary;
+            font-size: 13px;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+    
+    ta := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+export component SearchBox inherits Rectangle {
+    in property <string> placeholder: "Search...";
+    in-out property <string> text;
+    callback search(string);
+    
+    height: 32px;
+    background: Theme.bg-tertiary;
+    border-radius: Theme.radius-md;
+    border-width: input.has-focus ? 1px : 0px;
+    border-color: Theme.primary;
+    
+    HorizontalLayout {
+        padding-left: Theme.spacing-md;
+        padding-right: Theme.spacing-md;
+        spacing: Theme.spacing-sm;
+        
+        Text {
+            text: "🔍";
+            font-size: 14px;
+            vertical-alignment: center;
+            color: Theme.text-tertiary;
+        }
+        
+        input := TextInput {
+            text <=> root.text;
+            font-size: 13px;
+            color: Theme.text-primary;
+            vertical-alignment: center;
+            
+            accepted => { root.search(self.text); }
+        }
+    }
+}
+
+export component LeftSidebar inherits Rectangle {
+    in property <bool> collapsed: false;
+    in property <[string]> libraries: ["Device", "MCU_ST", "Connector", "Analog_ADI"];
+    in property <[string]> project-files: ["main.hwt_sch", "power.hwt_sch", "board.hwt_pcb"];
+    
+    callback library-selected(int);
+    callback file-selected(int);
+    
+    // Section collapse states
+    property <bool> libraries-collapsed: false;
+    property <bool> project-collapsed: false;
+    property <bool> history-collapsed: true;
+    
+    width: collapsed ? Theme.sidebar-collapsed : Theme.sidebar-width;
+    background: Theme.bg-secondary;
+    
+    if !collapsed: VerticalLayout {
+        padding: Theme.spacing-sm;
+        spacing: 0px;
+        
+        // Search box
+        SearchBox {
+            placeholder: "Search libraries...";
+        }
+        
+        Rectangle { height: Theme.spacing-md; }
+        
+        // Libraries section header
+        Rectangle {
+            height: 28px;
+            background: lib-ta.has-hover ? Theme.bg-tertiary : transparent;
+            
+            HorizontalLayout {
+                padding-left: Theme.spacing-sm;
+                padding-right: Theme.spacing-md;
+                spacing: Theme.spacing-sm;
+                
+                Text {
+                    text: libraries-collapsed ? "▶" : "▼";
+                    color: Theme.text-tertiary;
+                    font-size: 9px;
+                    vertical-alignment: center;
+                    width: 10px;
+                }
+                
+                Text {
+                    text: "LIBRARIES";
+                    color: Theme.text-tertiary;
+                    font-size: 11px;
+                    font-weight: 600;
+                    letter-spacing: 0.5px;
+                    vertical-alignment: center;
+                }
+            }
+            
+            lib-ta := TouchArea {
+                clicked => { libraries-collapsed = !libraries-collapsed; }
+            }
+        }
+        
+        // Libraries content
+        if !libraries-collapsed: VerticalLayout {
+            spacing: 0px;
+            
+            for lib[idx] in libraries: LibraryItem {
+                icon: "📁";
+                name: lib;
+                clicked => { root.library-selected(idx); }
+            }
+        }
+        
+        Rectangle { height: Theme.spacing-sm; }
+        
+        // Project section header
+        Rectangle {
+            height: 28px;
+            background: proj-ta.has-hover ? Theme.bg-tertiary : transparent;
+            
+            HorizontalLayout {
+                padding-left: Theme.spacing-sm;
+                padding-right: Theme.spacing-md;
+                spacing: Theme.spacing-sm;
+                
+                Text {
+                    text: project-collapsed ? "▶" : "▼";
+                    color: Theme.text-tertiary;
+                    font-size: 9px;
+                    vertical-alignment: center;
+                    width: 10px;
+                }
+                
+                Text {
+                    text: "PROJECT";
+                    color: Theme.text-tertiary;
+                    font-size: 11px;
+                    font-weight: 600;
+                    letter-spacing: 0.5px;
+                    vertical-alignment: center;
+                }
+            }
+            
+            proj-ta := TouchArea {
+                clicked => { project-collapsed = !project-collapsed; }
+            }
+        }
+        
+        // Project content
+        if !project-collapsed: VerticalLayout {
+            spacing: 0px;
+            
+            for file[idx] in project-files: LibraryItem {
+                icon: "📄";
+                name: file;
+                clicked => { root.file-selected(idx); }
+            }
+        }
+        
+        Rectangle { height: Theme.spacing-sm; }
+        
+        // History section header
+        Rectangle {
+            height: 28px;
+            background: hist-ta.has-hover ? Theme.bg-tertiary : transparent;
+            
+            HorizontalLayout {
+                padding-left: Theme.spacing-sm;
+                padding-right: Theme.spacing-md;
+                spacing: Theme.spacing-sm;
+                
+                Text {
+                    text: history-collapsed ? "▶" : "▼";
+                    color: Theme.text-tertiary;
+                    font-size: 9px;
+                    vertical-alignment: center;
+                    width: 10px;
+                }
+                
+                Text {
+                    text: "HISTORY";
+                    color: Theme.text-tertiary;
+                    font-size: 11px;
+                    font-weight: 600;
+                    letter-spacing: 0.5px;
+                    vertical-alignment: center;
+                }
+            }
+            
+            hist-ta := TouchArea {
+                clicked => { history-collapsed = !history-collapsed; }
+            }
+        }
+        
+        // History content
+        if !history-collapsed: VerticalLayout {
+            spacing: 0px;
+            
+            LibraryItem {
+                icon: "↩️";
+                name: "Place U1 (2 min ago)";
+            }
+            LibraryItem {
+                icon: "↩️";
+                name: "Route NET_CLK (5 min ago)";
+            }
+        }
+        
+        // Spacer
+        Rectangle { }
+    }
+    
+    // Collapsed state - just icons
+    if collapsed: VerticalLayout {
+        padding: Theme.spacing-sm;
+        spacing: Theme.spacing-md;
+        alignment: start;
+        
+        Rectangle {
+            width: 32px;
+            height: 32px;
+            background: Theme.bg-tertiary;
+            border-radius: Theme.radius-md;
+            
+            Text {
+                text: "📚";
+                font-size: 16px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+        
+        Rectangle {
+            width: 32px;
+            height: 32px;
+            background: Theme.bg-tertiary;
+            border-radius: Theme.radius-md;
+            
+            Text {
+                text: "📁";
+                font-size: 16px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+        
+        Rectangle {
+            width: 32px;
+            height: 32px;
+            background: Theme.bg-tertiary;
+            border-radius: Theme.radius-md;
+            
+            Text {
+                text: "🕐";
+                font-size: 16px;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
